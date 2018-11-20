@@ -1,5 +1,5 @@
 import unittest
-import ApneaPreprocessing as ap; # functions to be tested
+import Preprocessing_Annotations.ApneaPreprocessing as ap;
 
 class IsFirstApneaOverlapInterval(unittest.TestCase):
     def test_NoOverlapInterval_1(self):
