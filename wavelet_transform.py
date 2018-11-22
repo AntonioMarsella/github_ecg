@@ -22,6 +22,7 @@ for k in patient_groups:
         filename = str(k + '%02d' % i)
         full_path_to_filename = str(db_path + filename)
         ann = wfdb.rdann(full_path_to_filename, 'apn')
+        ann_i = 0
         record = wfdb.rdrecord(full_path_to_filename)
         record_len = record.sig_len
         last_chunk_index = int(np.floor(record_len/CHUNK_SIZE))*CHUNK_SIZE
@@ -49,10 +50,15 @@ for k in patient_groups:
             #plt.show()
 
             power = (abs(cfs)) ** 2
+            plt.ioff()
 
             f, ax = plt.subplots(figsize=(15, 10))
             time = range(0, current_chunk_size)
             ax.contourf(time, np.log2(frequencies), power)
-            f.savefig('/home/michael/Projects/ECGSleepApnea/cwt_classes/' + ann.symbol[j // CHUNK_SIZE] + '/' + filename + '_' + str(j) + '.png')
+
+            if j // CHUNK_SIZE < ann.ann_len:
+                ann_i = j // CHUNK_SIZE
+
+            f.savefig('/home/michael/Projects/ECGSleepApnea/cwt_classes/' + ann.symbol[ann_i] + '/' + filename + '_' + str(j) + '.png')
             plt.close(f)
 
