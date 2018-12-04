@@ -16,31 +16,34 @@ src="2018_Lehnen_img_1.jpg" alt="" width="458" height="300" />
 </figure>
 
 <h4>Problem statement and motivation:</h4>
-<p align="justify">Sleep apnea is a common organic sleep disorder; it is estimated to affect about 100 million people world-wide (Franklin et. al, 2015). 
-This disorder creates frequent pauses of breathing during sleep which causes the brain to wake up every time to start breathing again and 
-therefore leads to improper sleep. People suffering from this disease can experience drowsiness during the day or even more serious health 
-risks such as cardiovascular or cerebrovascular diseases, as it is a cause of medical morbidity and mortality.</p>
 <p align="justify">
-Currently, diagnosis of sleep apnea requires a long process and several tools. In recent years, researchers have 
-developed techniques to detect OSA using less information, such as from single-lead 
-ECG recordings. From these recordings, often time, time-frequency and frequency features are computed and subsequently used for machine 
-learning algorithms. Examples are Support Vector Machines (SVM) (Khandoker et. al, 2009), Recurrent Neural Networks (RNN) (Cheng et. al, 2017) and Hidden Markov 
-Models and Deep Learning (Li et. al, 2018).
+There are several diseases and disorders which can be detected by monitoring ECG recordings. Usually these diagnoses require a long process, 
+several tools and expertise and are therefore very time consuming and expensive. In the case of Sleep Apnea for instance researchers have 
+developed detection techniques using less information, such as from single-lead ECG recordings. From these recordings, often time, 
+time-frequency and frequency features are computed and subsequently used for machine learning algorithms. Examples are Support Vector 
+Machines (SVM) (Khandoker et al., 2009), Recurrent Neural Networks (RNN) (Cheng et al., 2017) and Hidden Markov Models and Deep 
+Learning (Li et al., 2018).
 </p>
 <p align="justify">
-While the accuracy is steadily improving over the years, the techniques proposed are mostly only valid for the sleep apnea case. 
-However, it would be of much more use if it were possible to develop a technique that could be applied to other medical problems that 
-can be detected by changes in the ECG over time e.g ischemia since the current diagnosis is based on a treadmill test which may cause 
-harm to the patient and the test would not be necessary anymore.</p>
+While the accuracy is steadily improving over the years, it would be of much more use if it were possible to develop a technique that 
+could be applied to other medical problems that be detected by changes in the ECG over time. Only one example is ischemia where the 
+current diagnosis is based on a potentially harmful treadmill test which would not be necessary any more.</p>
 <p align="justify">
 We want to compare different representations of the data to find out which are suited better than others for classification and which 
-features are the most important for those. Another aim is to find out if Transfer Learning from a Convolutional Neural Network (CNN) 
-can be used for this task and if furthermore combining CNNs with RNNs can improve the accuracy (see fig. 2).</p>
+features are the most important for those. Another aim is to find out whether Transfer Learning from a Convolutional Neural Network (CNN) 
+can be used for this task and if furthermore combining CNNs with RNNs can improve the accuracy taking into account timing (see fig. 2).</p>
+<p align="justify">
+However in our research we want to focus on the case of Sleep Apnea to be able to compare the results to previous research. 
+Sleep Apnea is a common organic sleep disorder which is estimated to affect about 100 million people world-wide (Franklin et al., 2015). 
+It creates frequent pauses of breathing during sleep which causes the brain to wake up every time to start breathing again and 
+therefore leads to improper sleep. People suffering from this disease can experience drowsiness during the day or even more serious health 
+risks such as cardiovascular or cerebrovascular diseases, as it is a cause of medical morbidity and mortality.
+</p>
 
 
 
 <figure><img width="300" height="300" style="text-align: center;" src="2018_Lehnen_img_2.png " alt="" />
-<figcaption>Fig 2. - ECG chunks classification with a Recurrent Convolutional Network
+<figcaption>Fig 2. - ECG chunks classification with a Recurrent Convolutional Network (inspired by Donahue, J. et al., 2014)
 </figcaption>
 </figure>
 
@@ -49,10 +52,10 @@ can be used for this task and if furthermore combining CNNs with RNNs can improv
 </figcaption>
 </figure>-->
 
-<h4>Research questions/hypotheses:</h4>
+<h4>Research questions:</h4>
 <ul>
 <li>Can CNNs classify <i>one minute</i> signals to apnea vs non-apnea events?</li>
-<li>Can transfer learning be used based on the CNNs pre-trained on ImageNet (Deng et. al, 2009) instead of training a whole CNN from scratch?</li>
+<li>Can transfer learning be used based on the CNNs pre-trained on ImageNet (Deng et al., 2009) instead of training a whole CNN from scratch?</li>
 <li>Can combining CNNs with RNNs improve accuracy taking into account timing?</li>
 <li>What signal representation is better suited for the classification?
 	<ul>
@@ -73,6 +76,7 @@ Cheng, M., Sori, W.J., Jiang, F., Khan, A., Liu, S. (2017). Recurrent Neural Net
 Li, K., PanWeifeng, Li, Y., Jiang Q., Liu, G. (2018). A method to detect sleep apnea based on deep neural network and hidden Markov model using single-lead ECG signal. Neurocomputing, 294, 94-101<br>
 Khandoker, A.H., Palaniswami, M. (2009). Automated recognition of patients with obstructive sleep apnoea using wavelet-based features of electrocardiogram recordings. Computers in Biology and Medicine, 39(1), 88-96<br>
 Deng, J., Dong, W., Socher, R., Li, L.-J., Li, K. & Li, F.-F. (2009). ImageNet: A large-scale hierarchical image database. CVPR, 248-255<br>
+Donahue, J., Hendricks, L.A., Guadarrama, S., Rohrbach, M., Venugopalan, S., Saenko, K., Darrell, T. (2014). Long-term Recurrent Convolutional Networks for Visual Recognition and Description<br>
 
 <h4>Downloads:</h4>
 <a href=”???” target=”_blank”>Final report</a>
