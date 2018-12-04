@@ -16,28 +16,19 @@ src="2018_Lehnen_img_1.jpg" alt="" width="458" height="300" />
 </figure>
 
 <h4>Problem statement and motivation:</h4>
-<p align="justify">Sleep Apnea is a common organic sleep disorder; it is estimated to affect about 100 million people world-wide (Franklin et. al, 2015). 
+<p align="justify">Sleep apnea is a common organic sleep disorder; it is estimated to affect about 100 million people world-wide (Franklin et. al, 2015). 
 This disorder creates frequent pauses of breathing during sleep which causes the brain to wake up every time to start breathing again and 
 therefore leads to improper sleep. People suffering from this disease can experience drowsiness during the day or even more serious health 
 risks such as cardiovascular or cerebrovascular diseases, as it is a cause of medical morbidity and mortality.</p>
-<!--<p align="justify">Currently, diagnosis of sleep apnea requires a long process and several tools. Early recognition is possible using 
-ambulatory recording methods such as long-term ECG, long-term blood pressure and dedicated recording systems for the recognition of 
-sleep-related breathing disorders which record respiratory flow or movement, oxygen saturation, heart rate, body movements or body 
-position and snoring. The final diagnosis of sleep apnea is done in a sleep laboratory using cardiorespiratory polysomnography, 
-which requires the recording of EEG, EOG, and EMG to determine the sleep stages, oronasal airflow, chest wall and abdominal wall 
-movements for respiratory effort, oxygen saturation to monitor the effect of respiration, and finally ECG for heart rate monitoring. 
-Sometimes non-invasive continuous blood pressure is recorded. Respiratory effort can be quantified by intrathoracic pressure recording 
-using an esophageal balloon. Airflow quantification requires a pneumotachograph with a fullface mask. The evaluation of the sleep 
-recordings is done by visual inspection of the long-term recordings, usually with the help of computer-based systems. Partly due to 
-this intrusive process, many cases go undetected.
-</p>-->
-<p align="justify">Currently, diagnosis of sleep apnea requires a long process and several tools. In recent years, researchers have 
+<p align="justify">
+Currently, diagnosis of sleep apnea requires a long process and several tools. In recent years, researchers have 
 developed techniques to detect OSA using less information, such as from single-lead 
 ECG recordings. From these recordings, often time, time-frequency and frequency features are computed and subsequently used for machine 
 learning algorithms. Examples are Support Vector Machines (SVM) (Khandoker et. al, 2009), Recurrent Neural Networks (RNN) (Cheng et. al, 2017) and Hidden Markov 
 Models and Deep Learning (Li et. al, 2018).
 </p>
-<p align="justify">While the accuracy is steadily improving over the years, the techniques proposed are mostly only valid for the sleep apnea case. 
+<p align="justify">
+While the accuracy is steadily improving over the years, the techniques proposed are mostly only valid for the sleep apnea case. 
 However, it would be of much more use if it were possible to develop a technique that could be applied to other medical problems that 
 can be detected by changes in the ECG over time e.g ischemia since the current diagnosis is based on a treadmill test which may cause 
 harm to the patient and the test would not be necessary anymore.</p>
@@ -47,14 +38,9 @@ features are the most important for those. Another aim is to find out if Transfe
 can be used for this task and if furthermore combining CNNs with RNNs can improve the accuracy (see fig. 2).</p>
 
 
-<!--<p align="justify">
-Sleep Apnea is a common organic sleep disorder and is estimaed to affect about 100 million people world-wide \cite{FL}. 
-People suffering from this disease can experience drowsiness during the day or even more serious health risks such as cardiovascular or cerebrovascular diseases. 
-The problem is less the treatment but more the diagnosis which currently requires a long process and several tools. 
-In recent years, researchers have developed techniques to detect sleep apnea using less information such as from single-lead ECG recordings.
-</p>-->
+
 <figure><img width="300" height="300" style="text-align: center;" src="2018_Lehnen_img_2.png " alt="" />
-<figcaption>Fig 2. - ECG chunks classification with a Recurrent Convolutional Network.
+<figcaption>Fig 2. - ECG chunks classification with a Recurrent Convolutional Network
 </figcaption>
 </figure>
 
