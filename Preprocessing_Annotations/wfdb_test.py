@@ -10,9 +10,9 @@ import shutil
 import csv
 
 import wfdb
-import ApneaPreprocessing as ap
+import Preprocessing_Annotations.ApneaPreprocessing as ap
 
-def testOpenApneaECG():
+def OpenApneaECG():
     db_path = 'datasets\\db1_apnea-ecg\\a01';
     #db_path = 'datasets\\db3_ucddb\\ucddb002';
 
@@ -31,7 +31,7 @@ def testOpenApneaECG():
     wfdb.plot_wfdb(record=record, annotation=ann, plot_sym=True, title='Record a1 from Physionet Apnea')
     return
 
-def testOpenUCDDB():
+def OpenUCDDB():
     db_path = 'datasets\\db3_ucddb\\ucddb002';
 
     record = wfdb.rdrecord(db_path)
@@ -49,17 +49,17 @@ def testOpenUCDDB():
     print("ann.symbol len = ", len(ann.symbol))
     print(ann.symbol)
 
-    #wfdb.plot_wfdb(record=record, annotation=ann, plot_sym=True, title='Record ucddb002 from UCDDB')
+    wfdb.plot_wfdb(record=record, annotation=ann, plot_sym=True, title='Record ucddb002 from UCDDB')
     return
 
-def testUCDDB_Functions():
+def UCDDB_Functions():
     path = 'datasets\\db3_ucddb\\ucddb002_respevt.txt';
 
     apnea_signals = ap.UCDDB_LoadAnnonationsTXTFileRaw(path);
     print(apnea_signals);
 
     start_time = datetime.strptime('00:11:04', '%H:%M:%S')
-    annotations_std = ap.UCDDB_LoadAnnonationsTXTFileStandardized(path, start_time=start_time, duration_in_seconds=6.2*60*60);
+    annotations_std = ap.UCDDB_LoadAnnonationsTXTFileStandardized(path, start_time=start_time, duration_in_seconds=7.65*60*60);
     print(annotations_std)
 
     annotations_std_binary = [not(type=='none') for type in annotations_std]
@@ -91,13 +91,18 @@ def testUCDDB_Functions():
     plt.plot(resampled)
 
     apn_symbols = list()
-    for element in resampled_full_size:
+    for element in resampled:
         symbol = 'N'
         if element == 1:
             symbol = 'A'
         apn_symbols.append(symbol)
 
-    wfdb.wrann('ucddb002', 'apn', np.array(list(range(len(apn_symbols)))), np.array(apn_symbols))
+    resampled_1Min = [element*60*128 for element in range(len(apn_symbols))]
+
+    print('Write annotation file')
+    print(resampled_1Min)
+    print(apn_symbols)
+    wfdb.wrann('ucddb002', 'apn', np.array(resampled_1Min), np.array(apn_symbols))
 
     with open('datasets\\db3_ucddb\\AnnotationsResampled\\ucddb002_AnnotationsInfo.txt', mode='w', newline='') as csv_file:
         fieldnames = \
@@ -123,7 +128,7 @@ def testUCDDB_Functions():
 
     return
 
-def testOpenSHHSPSDB():
+def OpenSHHSPSDB():
     path = 'shhpsgdb\\0000';
     record = wfdb.rdrecord(path);
     wfdb.plot_wfdb(record=record, plot_sym=True, title='shhpsdb Record ' + path)
@@ -197,9 +202,12 @@ def ucddbResampleAnnotationAll():
         ucddbResampleAnnotation('physionet.org\\'+file_name, 'physionet.org\\AnnotationsResampled\\Resampled_' + file_name);
     return;
 
-#testOpenSHHSPSDB();
-#ucddbResampleAnnotationAll();
-#testOpenApneaECG();
-testOpenUCDDB()
-
-#testUCDDB_Functions()
+ap.UCDDB_ResampleAnnotations(
+    path_source='D:\\SkyDrive\\Studium\\Maastricht\\Project1\\Period2ResampleAnnotations\\datasets\\db3_ucddb',
+    path_target ='D:\\SkyDrive\\Studium\\Maastricht\\Project1\\Period2ResampleAnnotations\\datasets\\db3_ucddb\\Resampled',
+    target_file_postfix='_Shorter_IgnoreOverlap',
+    preserve_input_size=False,
+    ignore_first_timeframe_during_overlap=True,
+    create_annotationfiles_as_ascii=False,
+    print_log=True
+)
