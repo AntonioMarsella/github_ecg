@@ -7,27 +7,121 @@ import ntpath
 import numpy as np
 import os
 import shutil
+import csv
 
 import wfdb
+import ApneaPreprocessing as ap
 
 def testOpenApneaECG():
     db_path = 'datasets\\db1_apnea-ecg\\a01';
-    #db_path = 'physionet.org\\ucddb002';
+    #db_path = 'datasets\\db3_ucddb\\ucddb002';
 
     record = wfdb.rdrecord(db_path)
-    #wfdb.plot_wfdb(record=record, title='Record a1 from Physionet Apnea')
+
+    signals, fields = wfdb.rdsamp(db_path)
+    print('Fields: ', fields)
 
     ann = wfdb.rdann(db_path, 'apn')
+    print("ann.sample len = ", len(ann.sample))
     print(ann.sample)
+
+    print("ann.symbol len = ", len(ann.symbol))
     print(ann.symbol)
 
     wfdb.plot_wfdb(record=record, annotation=ann, plot_sym=True, title='Record a1 from Physionet Apnea')
-    return;
+    return
 
-def testOpenUCDDB(filepath):
-    path = "physionet.org\\ucddb002";
-    record = wfdb.rdrecord(path, 'rec');
-    return;
+def testOpenUCDDB():
+    db_path = 'datasets\\db3_ucddb\\ucddb002';
+
+    record = wfdb.rdrecord(db_path)
+
+    signals, fields = wfdb.rdsamp(db_path)
+    print('Fields: ', fields)
+
+    print('counter_freq', record.counter_freq)
+    print('samples_per_frame', record.samps_per_frame)
+
+    ann = wfdb.rdann(db_path, 'apn')
+    print("ann.sample len = ", len(ann.sample))
+    print(ann.sample)
+
+    print("ann.symbol len = ", len(ann.symbol))
+    print(ann.symbol)
+
+    #wfdb.plot_wfdb(record=record, annotation=ann, plot_sym=True, title='Record ucddb002 from UCDDB')
+    return
+
+def testUCDDB_Functions():
+    path = 'datasets\\db3_ucddb\\ucddb002_respevt.txt';
+
+    apnea_signals = ap.UCDDB_LoadAnnonationsTXTFileRaw(path);
+    print(apnea_signals);
+
+    start_time = datetime.strptime('00:11:04', '%H:%M:%S')
+    annotations_std = ap.UCDDB_LoadAnnonationsTXTFileStandardized(path, start_time=start_time, duration_in_seconds=6.2*60*60);
+    print(annotations_std)
+
+    annotations_std_binary = [not(type=='none') for type in annotations_std]
+
+    resampled = ap.ResampleAnnotations(
+        annotations=annotations_std_binary,
+        source_sample_frequency=1,
+        target_sample_frequency=(1 / 60),
+        preserve_input_size=False,
+        ignore_first_timeframe_during_overlap=False,
+        ignore_short_apnea_in_timeframe=False)
+
+    resampled_full_size = ap.ResampleAnnotations(
+        annotations=annotations_std_binary,
+        source_sample_frequency=1,
+        target_sample_frequency=(1 / 60),
+        preserve_input_size=True,
+        ignore_first_timeframe_during_overlap=False,
+        ignore_short_apnea_in_timeframe=False)
+
+    resampled_full_size_IgnoreFirstOverlap = ap.ResampleAnnotations(
+        annotations=annotations_std_binary,
+        source_sample_frequency=1,
+        target_sample_frequency=(1 / 60),
+        preserve_input_size=True,
+        ignore_first_timeframe_during_overlap=True,
+        ignore_short_apnea_in_timeframe=False)
+
+    plt.plot(resampled)
+
+    apn_symbols = list()
+    for element in resampled_full_size:
+        symbol = 'N'
+        if element == 1:
+            symbol = 'A'
+        apn_symbols.append(symbol)
+
+    wfdb.wrann('ucddb002', 'apn', np.array(list(range(len(apn_symbols)))), np.array(apn_symbols))
+
+    with open('datasets\\db3_ucddb\\AnnotationsResampled\\ucddb002_AnnotationsInfo.txt', mode='w', newline='') as csv_file:
+        fieldnames = \
+            ['Sample',
+             'DateTime',
+             'Apnea yes/no',
+             'Apnea Type',
+             'Apnea yes/no Resampled',
+             'Apnea yes/no Resampled Ignore First Overlap'
+             ]
+        writer = csv.DictWriter(csv_file, fieldnames=fieldnames, delimiter='\t')
+
+        writer.writeheader()
+
+        for i in range(len(annotations_std)):
+            writer.writerow({'Sample': i,
+                             'DateTime': (start_time + timedelta(seconds=i)),
+                             'Apnea yes/no': annotations_std_binary[i],
+                             'Apnea Type': annotations_std[i],
+                             'Apnea yes/no Resampled': resampled_full_size[i],
+                             'Apnea yes/no Resampled Ignore First Overlap': resampled_full_size_IgnoreFirstOverlap[i]
+                             })
+
+    return
 
 def testOpenSHHSPSDB():
     path = 'shhpsgdb\\0000';
@@ -105,4 +199,7 @@ def ucddbResampleAnnotationAll():
 
 #testOpenSHHSPSDB();
 #ucddbResampleAnnotationAll();
-testOpenApneaECG();
+#testOpenApneaECG();
+testOpenUCDDB()
+
+#testUCDDB_Functions()
