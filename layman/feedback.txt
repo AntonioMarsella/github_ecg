@@ -1,0 +1,26 @@
+Joel:
+
+Hi,
+ 
+Thank you for sending it.
+ 
+When I read it, it seems to be on two legs: First you introduce the project through sleep apnea and work it out from the application 
+side. Then you say: well, there are a lot of other pathologies where a similar approach would work, hence we want to develop a technique 
+that works generically; thus from the technical perspective.  I think you need to make a choice here, because this gives the impression 
+that you don’t know what you want. An alternative, which seems more logical to me, is: we want to work on this and this technique to 
+find … which works for a range of applications…. And as a concrete case we work on sleep apnea
+ 
+As a remark: you are using the abbreviation OSA, but do not introduce it
+ 
+grtnx
+
+
+Pietro: 
+I agree with Joel’s feedback. The structure he proposes is clearer, more focused on the technique, and not too much application dependent. 
+This is also relevant because from your description it is unclear whether the accuracy of current algorithms for detecting OSA is still 
+sub-optimal or not, which could make someone wonder what is the benefit to go for novel approaches.
+ 
+Moreover, please make sure to add references to the figures, in case you did not generate those yourselves, but you took it from other sources.
+ 
+Best,
+Pietro
