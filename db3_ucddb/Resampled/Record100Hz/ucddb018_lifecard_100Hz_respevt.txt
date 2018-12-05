@@ -1,0 +1,13 @@
+                              Respiratory Event List
+        Respiratory Event           Desaturation   Snore Arousal     B/T
+ Time       Type   PB/CS  Duration  Low    %Drop                 Rate  Change
+04:44:53  HYP-O             21       92.8    2.1     +     +              
+04:50:24  HYP-O             29       92.8    3.3     +     +      64     -4   
+04:55:00  HYP-O             16                       -     +      67.9   -11.5
+04:55:36  HYP-O             17       92.8    2.1     -     -              
+04:56:23  HYP-C             16       94.1    2.8     -     +      55      25.1
+04:56:56  HYP-O             23       90.8    5.3     -     +      65.9   -16.4
+04:57:50  HYP-O             22       90.8    5.3     -     +              
+04:58:32  HYP-C             25       92.8    4.1     -     +      66.6   -10.2
+06:01:27  HYP-O             15       92.8    2.1     -     +      62.9   -10.3
+

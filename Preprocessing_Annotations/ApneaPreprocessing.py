@@ -3,12 +3,14 @@ import math
 import datetime
 from datetime import datetime
 from datetime import timedelta
-import os
+import glob
+from pathlib import Path
 
 import numpy as np
 import csv
 
 import wfdb
+import wfdb.processing
 
 # region General core functions
 
@@ -103,6 +105,73 @@ def OneOrZeroToAorN(number):
         symbol = 'A'
     return symbol
 
+def ResampleRecordFile(record_source_dir, record_source_name, record_target_dir, record_target_name, target_frequency):
+    '''
+    Creates a new record file with a new frequency. Uses wfdb functions
+    :param record_source_name: path to source record (no extension)
+    :param record_target_name: path to target record (no extension)
+    :param target_frequency: in Hz
+    :return:
+    '''
+
+    # Read part of a record from Physiobank
+    record_source_path = record_source_dir + '\\' + record_source_name
+
+    signals, fields = wfdb.rdsamp(record_source_path)
+
+    print('Record to resample', record_source_path)
+    print(fields)
+    print('Original signal shape', np.shape(signals))
+
+    # see docs:  https://wfdb.readthedocs.io/en/latest/processing.html#wfdb.processing.resample_sig
+    signals = np.transpose(signals) # transpose, so that to following loop works
+    resampled_signals = [wfdb.processing.resample_sig(signal, fields['fs'], target_frequency)[0] for signal in signals]
+    resampled_signals = np.transpose(resampled_signals) # transpose back, so wfdb.wrsamp() works
+
+    print('resampled signal shape', np.shape(resampled_signals))
+
+    # Write a local WFDB record
+    units = fields['units']
+    signal_names = [name.replace(" ", "_") for name in  fields['sig_name']] # replace possible whitespaces
+    fmt = ['16'] * len(units) # fmt: I don't know what this does exactly, and what to configure...
+
+    wfdb.wrsamp(record_name= record_target_name,
+                write_dir=record_target_dir,
+                fs=target_frequency,
+                units=units,
+                sig_name=signal_names,
+                p_signal=resampled_signals,
+                fmt=fmt)
+
+    return
+
+def ResampleRecordFiles(record_source_dir, record_target_dir, target_frequency):
+    '''
+    Resamples alle records (.dat) in a directory (annotations are ignored).
+    :param record_source_dir:
+    :param record_target_dir:
+    :param target_frequency:
+    :return:
+    '''
+
+    # get all record files in the source folder
+    record_paths = glob.glob(record_source_dir + '\\*.dat');
+    # get record names (just name, not path) without file extensions
+    record_names_no_extension = [Path(path).resolve().stem for path in record_paths]
+
+    # resample all records
+    for i in range(len(record_names_no_extension)):
+        record_source_name = record_names_no_extension[i]
+        record_target_name =str(record_source_name)+'_'+ str(target_frequency)+'Hz'
+        ResampleRecordFile(
+            record_source_dir=record_source_dir,
+            record_source_name=record_source_name,
+            record_target_dir=record_target_dir,
+            record_target_name=record_target_name,
+            target_frequency=target_frequency
+        )
+
+    return
 #endregion
 
 # region Database 3 (UCDDB) specific functions
@@ -193,6 +262,7 @@ def UCDDB_LoadAnnonationsTXTFileStandardized(source_file, start_time, duration_i
 def UCDDB_ResampleAnnotations(
         path_source,
         path_target,
+        source_file_portfix = '',
         target_file_postfix='',
         preserve_input_size=False,
         ignore_first_timeframe_during_overlap=True,
@@ -237,7 +307,7 @@ def UCDDB_ResampleAnnotations(
         # Init
         # -----------------------------------------------------------------------
 
-        dataset_name = datasets[dataset_i][0] # f.ex. ucddb002
+        dataset_name = datasets[dataset_i][0] + source_file_portfix # f.ex. ucddb002
         experiment_start_time = datasets[dataset_i][1] #datetime as string f.ex. 23:45:34
 
         print('Starting to process: ', dataset_name)
@@ -337,8 +407,8 @@ def UCDDB_ResampleAnnotations(
                  'Frequency',
                  'NumberSamples',
                  'TotalDuration[h]',
-                 'PercentageApnea',
-                 'PercentageNoApnea'
+                 'Apnea[%]',
+                 'NoApnea[%]'
                  ]
             writer = csv.DictWriter(csv_file, fieldnames=fieldnames, delimiter='\t')
 
@@ -346,12 +416,12 @@ def UCDDB_ResampleAnnotations(
             if dataset_i == 0:
                 writer.writeheader()
 
-            writer.writerow({'RecordName': record_source_path,
+            writer.writerow({'RecordName': dataset_name,
                              'Frequency': record_frequency,
                              'NumberSamples': record_length,
                              'TotalDuration[h]': round(record_duration_in_seconds/60/60,2),
-                             'PercentageApnea': round(percentage_apnea, 2),
-                             'PercentageNoApnea': round(percentage_no_apnea,2)
+                             'Apnea[%]': round(percentage_apnea, 2),
+                             'NoApnea[%]': round(percentage_no_apnea,2)
                              })
             print() # new line
     return

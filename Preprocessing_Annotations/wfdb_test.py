@@ -32,24 +32,35 @@ def OpenApneaECG():
     return
 
 def OpenUCDDB():
-    db_path = 'datasets\\db3_ucddb\\ucddb002';
+    record_path = 'D:\\SkyDrive\\Studium\\Maastricht\\Project1\\Period2ResampleAnnotations\\datasets\\db3_ucddb\\Record100Hz\\ucddb002_lifecard_100Hz'
+    annotation_path = 'D:\\SkyDrive\\Studium\\Maastricht\\Project1\\Period2ResampleAnnotations\\datasets\\db3_ucddb\\ResampledAnn100HzRecord\\ucddb002_lifecard_100Hz_Shorter_IgnoreOverlap'
+    record = wfdb.rdrecord(record_path)
 
-    record = wfdb.rdrecord(db_path)
-
-    signals, fields = wfdb.rdsamp(db_path)
+    signals, fields = wfdb.rdsamp(record_path)
     print('Fields: ', fields)
 
     print('counter_freq', record.counter_freq)
     print('samples_per_frame', record.samps_per_frame)
 
-    ann = wfdb.rdann(db_path, 'apn')
+    ann = wfdb.rdann(annotation_path, 'apn')
     print("ann.sample len = ", len(ann.sample))
     print(ann.sample)
 
     print("ann.symbol len = ", len(ann.symbol))
     print(ann.symbol)
 
-    wfdb.plot_wfdb(record=record, annotation=ann, plot_sym=True, title='Record ucddb002 from UCDDB')
+    wfdb.plot_wfdb(record=record, annotation=ann, plot_sym=True, title=record_path)
+    return
+
+def OpenUCDDB_1():
+    db_path = 'D:\\SkyDrive\\Studium\\Maastricht\\Project1\\Period2ResampleAnnotations\\datasets\\db3_ucddb\\ResamplesRecord100Hz\\ucddb002_100Hz';
+
+    record = wfdb.rdrecord(db_path)
+
+    signals, fields = wfdb.rdsamp(db_path)
+    print('Fields: ', fields)
+
+    wfdb.plot_wfdb(record=record, plot_sym=True, title=db_path)
     return
 
 def UCDDB_Functions():
@@ -202,12 +213,29 @@ def ucddbResampleAnnotationAll():
         ucddbResampleAnnotation('physionet.org\\'+file_name, 'physionet.org\\AnnotationsResampled\\Resampled_' + file_name);
     return;
 
-ap.UCDDB_ResampleAnnotations(
-    path_source='D:\\SkyDrive\\Studium\\Maastricht\\Project1\\Period2ResampleAnnotations\\datasets\\db3_ucddb',
-    path_target ='D:\\SkyDrive\\Studium\\Maastricht\\Project1\\Period2ResampleAnnotations\\datasets\\db3_ucddb\\Resampled',
-    target_file_postfix='_Shorter_IgnoreOverlap',
-    preserve_input_size=False,
-    ignore_first_timeframe_during_overlap=True,
-    create_annotationfiles_as_ascii=False,
-    print_log=True
-)
+# ap.ResampleRecordFile(
+#     record_source_dir = 'D:\\SkyDrive\\Studium\\Maastricht\\Project1\\Period2ResampleAnnotations\\datasets\\db3_ucddb',
+#     record_source_name = 'ucddb002',
+#     record_target_dir = 'D:\\SkyDrive\\Studium\\Maastricht\\Project1\\Period2ResampleAnnotations\\datasets\\db3_ucddb\\ResamplesRecord100Hz',
+#     record_target_name = 'ucddb002_100Hz',
+#     target_frequency=100
+# )
+
+# ap.ResampleRecordFiles(
+#     record_source_dir='D:\\SkyDrive\\Studium\\Maastricht\\Project1\\Period2ResampleAnnotations\\datasets\\db3_ucddb',
+#     record_target_dir='D:\\SkyDrive\\Studium\\Maastricht\\Project1\\Period2ResampleAnnotations\\datasets\\db3_ucddb\\ResamplesRecord100Hz',
+#     target_frequency=100
+# )
+
+OpenUCDDB()
+
+# ap.UCDDB_ResampleAnnotations(
+#     path_source='D:\\SkyDrive\\Studium\\Maastricht\\Project1\\Period2ResampleAnnotations\\datasets\\db3_ucddb\\Record100Hz',
+#     path_target ='D:\\SkyDrive\\Studium\\Maastricht\\Project1\\Period2ResampleAnnotations\\datasets\\db3_ucddb\\ResampledAnn100HzRecord',
+#     target_file_postfix='_Shorter_IgnoreOverlap',
+#     source_file_portfix='_lifecard_100Hz',
+#     preserve_input_size=False,
+#     ignore_first_timeframe_during_overlap=True,
+#     create_annotationfiles_as_ascii=False,
+#     print_log=True
+# )
