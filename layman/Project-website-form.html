@@ -4,7 +4,7 @@
 <title>Apnea-ECG</title>
 </head>
 <body>
-<h2>Detecting sleep apnea from ECG recordings</h2>
+<h2>Detecting Sleep Apnea from ECG recordings</h2>
 
 Students: Glazunov M., Jansen J., Lehnen J., Marsella A., Sch&ouml;nwald N., Yeritsyan A.;
 Supervisors: Karel J., Bonizzi P.; 
@@ -12,7 +12,7 @@ Semester: 2018-2019;
 
 <figure><img style="float: left; padding-right: 20px;"
 src="2018_Lehnen_img_1.jpg" alt="" width="458" height="300" />
-<figcaption>Fig 1. - An example ECG recording</figcaption>
+<figcaption>Fig 1. - An example ECG recording, www.hartstichting.nl (2018)</figcaption>
 </figure>
 
 <h4>Problem statement and motivation:</h4>
@@ -30,7 +30,7 @@ could be applied to other medical problems that be detected by changes in the EC
 current diagnosis is based on a potentially harmful treadmill test which would not be necessary any more.</p>
 <p align="justify">
 We want to compare different representations of the data to find out which are suited better than others for classification and which 
-features are the most important for those. Another aim is to find out whether Transfer Learning from a Convolutional Neural Network (CNN) 
+features are the most important for those. We expect something as visualized in fig. 3. Another aim is to find out whether Transfer Learning from a Convolutional Neural Network (CNN) 
 can be used for this task and if furthermore combining CNNs with RNNs can improve the accuracy taking into account timing (see fig. 2).</p>
 <p align="justify">
 However in our research we want to focus on the case of Sleep Apnea to be able to compare the results to previous research. 
@@ -42,15 +42,10 @@ risks such as cardiovascular or cerebrovascular diseases, as it is a cause of me
 
 
 
-<figure><img width="300" height="300" style="text-align: center;" src="2018_Lehnen_img_2.png " alt="" />
+<figure><img width="300" height="300" style="text-align: center;" src="2018_Lehnen_img_2.png" alt="" />
 <figcaption>Fig 2. - ECG chunks classification with a Recurrent Convolutional Network (inspired by Donahue, J. et al., 2014)
 </figcaption>
 </figure>
-
-<!--<figure><img style="text-align: center;" src="http://<url to image>" alt="" />
-<figcaption>Fig 3. - ???. 
-</figcaption>
-</figure>-->
 
 <h4>Research questions:</h4>
 <ul>
@@ -65,13 +60,20 @@ risks such as cardiovascular or cerebrovascular diseases, as it is a cause of me
 </li>
 </ul>
 
-<h4>Main outcomes:</h4>
+<figure><img width="350" height="230" style="text-align: center;" src="2018_Lehnen_img_3.png" alt="" />
+<figcaption>Fig 3. - Possible feature visualization from CNN
+</figcaption>
+</figure>
+
+<h4>Main expected outcomes:</h4>
 <ul>
-<li>to be found out.</li>
+<li>Transfer Learning could potentially create good results</li>
+<li>CNN can learn relevant features</li>
+<li>to be found out: RNN and best representation</li>
 </ul>
 
 <h4>References:</h4>
-Franklin, K. A., &amp; Lindberg, E. (2015). Obstructive sleep apnea is a common disorder in the population—a review on the epidemiology of sleep apnea. Journal of Thoracic Disease, 7(8), 1311-1322<br>
+Franklin, K. A., &amp; Lindberg, E. (2015). Obstructive sleep apnea is a common disorder in the population &ndash; a review on the epidemiology of sleep apnea. Journal of Thoracic Disease, 7(8), 1311-1322<br>
 Cheng, M., Sori, W.J., Jiang, F., Khan, A., Liu, S. (2017). Recurrent Neural Network Based Classification of ECG Signal Features for Obstruction of Sleep Apnea Detection. 2017 IEEE International Conference on Computational Science and Engineering (CSE) and IEEE International Conference on Embedded and Ubiquitous Computing (EUC)<br>
 Li, K., PanWeifeng, Li, Y., Jiang Q., Liu, G. (2018). A method to detect sleep apnea based on deep neural network and hidden Markov model using single-lead ECG signal. Neurocomputing, 294, 94-101<br>
 Khandoker, A.H., Palaniswami, M. (2009). Automated recognition of patients with obstructive sleep apnoea using wavelet-based features of electrocardiogram recordings. Computers in Biology and Medicine, 39(1), 88-96<br>
