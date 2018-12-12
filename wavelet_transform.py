@@ -54,7 +54,7 @@ for k in patient_groups:
 
 
                 [cfs, frequencies] = pywt.cwt(sst, scales, wavelet)
-                frequencies = pywt.scale2frequency(wavelet, scales) / dt
+                #frequencies = pywt.scale2frequency(wavelet, scales) / dt
 
                 #plt.imshow(cfs, cmap='PRGn', aspect='auto', vmax=abs(cfs).max(), vmin=-abs(cfs).max())
                 #plt.show()
@@ -64,7 +64,7 @@ for k in patient_groups:
 
                 f, ax = plt.subplots(figsize=(15, 10))
                 time = range(0, current_chunk_size)
-                ax.contourf(time, frequencies, power)
+                ax.contourf(time, np.log2(frequencies), power)
 
                 # f.patch.set_visible(False)
                 # ax.axis('off')
