@@ -5,6 +5,8 @@ from datetime import datetime
 from datetime import timedelta
 import glob
 from pathlib import Path
+import pyedflib
+import xml.etree.ElementTree
 
 import numpy as np
 import csv
@@ -105,6 +107,7 @@ def OneOrZeroToAorN(number):
         symbol = 'A'
     return symbol
 
+# NOT NEEDED
 def ResampleRecordFile(record_source_dir, record_source_name, record_target_dir, record_target_name, target_frequency):
     '''
     Creates a new record file with a new frequency. Uses wfdb functions
@@ -186,10 +189,10 @@ def UCDDB_LoadAnnonationsTXTFileRaw(source_file):
     types = []
     durations = []
     with open(source_file, "r") as file:
-        i = 0;
+        i = 0
 
         datetime_last = datetime.min
-        day_counter = 0;
+        day_counter = 0
 
         for line in file:
             if i > 2: # ignore first three rows
@@ -347,8 +350,8 @@ def UCDDB_ResampleAnnotations(
 
         # convert list with annotation types to a simple list with 1 and 0
         # 0 = no apnea, 1 = apnea (the apnea type does not matter)
-        annotations_std_binary = [not (type == 'none') for type in annotations_std_types]
-
+        #annotations_std_binary = [not (type == 'none') for type in annotations_std_types]
+        annotations_std_binary = [(type == 'APNEA-O') for type in annotations_std_types]
         # ---------------------------------------------------------------
         # Resampling
         # ---------------------------------------------------------------
@@ -419,6 +422,155 @@ def UCDDB_ResampleAnnotations(
             writer.writerow({'RecordName': dataset_name,
                              'Frequency': record_frequency,
                              'NumberSamples': record_length,
+                             'TotalDuration[h]': round(record_duration_in_seconds/60/60,2),
+                             'Apnea[%]': round(percentage_apnea, 2),
+                             'NoApnea[%]': round(percentage_no_apnea,2)
+                             })
+            print() # new line
+    return
+#endregion
+
+#region SHHS Database (Database 2)
+
+def SHHS_getEventsPerSecond(path_annotation_file):
+    """
+    :return an array with seconds from 0 to duration of recording as index containing all events at that second comma separated
+    :param path_annotation_file:
+    :return:
+    """
+
+    # works for now, but is not guaranteed to be at that index
+    e = xml.etree.ElementTree.parse(path_annotation_file).getroot()[2]
+
+    totalDuration = 0
+    for event in e:
+        concept = event.findtext('EventConcept')
+        if concept == 'Recording Start Time':
+            totalDuration = (int(float(event.findtext('Duration'))))
+            break
+
+    eventsPerSecond = ["none" for x in range(totalDuration + 1)]
+
+    for event in e:
+        concept = event.findtext('EventConcept')
+        # use this for all events
+        if concept != 'Recording Start Time':
+            # if (concept == 'Obstructive apnea|Obstructive Apnea' or concept == 'Hypopnea|Hypopnea' or concept == 'Central apnea|Central Apnea'):
+            start = int(float(event.findtext('Start')))
+            duration = int(float(event.findtext('Duration')))
+            for i in range(0, duration):
+                # dodgy fix; duration of some events apparently goes on after recording stopped..
+                if (start + i) > totalDuration:
+                    break
+                # handle possible overlaps of events
+                if eventsPerSecond[start + i] != "none":
+                    eventsPerSecond[start + i] += "," + concept
+                else:
+                    eventsPerSecond[start + i] = concept
+
+    return eventsPerSecond
+
+def SHHS_CreateRepresentationChunks(
+        dir_source,
+        dir_target,
+        print_log=True):
+
+    ecg_chn = 3
+    target_freq = 100  # sampling frequency (target)
+    sample_seconds = 60  # sample seconds
+    sample_length = sample_seconds * target_freq  # sample length
+
+    datasets = sorted(glob.glob(dir_source + '\\*.edf'))
+    # loop through all data sets
+    for dataset_i in datasets:
+
+        # -----------------------------------------------------------------------
+        # Init
+        # -----------------------------------------------------------------------
+
+        dataset_path = dataset_i; # f.ex. ucddb028_lifecard
+
+        print('Starting to process: ', dataset_path)
+
+        # f.ex. MyPath\\ucddb002_respevt.txt
+        annotation_source_path = dataset_path[:-4] + '-nsrr.xml'
+
+
+        # f.ex. MyPath\\MySubFolder\\Resampling_AnnotationInfo.txt
+        # (used to store informations about the resamlings)
+        target_path_resampling_info= dir_target + '\\' + 'Resampling_AnnotationInfo.txt'
+
+        # get the frequency and duration of the record. This may not be the best way just to get those values
+        # because the signals are loaded too (unnecessary overhead), but this database is not too big...
+        #signals, fields = wfdb.rdsamp(record_source_path)
+
+        file_reader = pyedflib.EdfReader(dataset_path)  # file handle
+
+        # Resample to 100Hz
+
+        ecg, _ = wfdb.processing.resample_sig(
+            file_reader.readSignal(ecg_chn),
+            file_reader.getSampleFrequency(ecg_chn),
+            target_freq)
+
+        record_duration_in_seconds = int(np.ceil(len(ecg) / target_freq))
+        num_samp = int(np.ceil(len(ecg) / sample_length))
+
+        # get annotation types for the complete record in 1Hz
+        # (one annotation per second)
+
+        annotations_std_types = SHHS_getEventsPerSecond(annotation_source_path)
+
+        # convert list with annotation types to a simple list with 1 and 0
+        # 0 = no apnea, 1 = apnea (the apnea type does not matter)
+        annotations_std_binary = [not (type == 'none') for type in annotations_std_types]
+        #annotations_std_binary = [(type == 'APNEA-O') for type in annotations_std_types]
+        # ---------------------------------------------------------------
+        # Resampling
+        # ---------------------------------------------------------------
+
+        # resample annotations
+        resampled_ann = ResampleAnnotations(
+            annotations=annotations_std_binary,
+            source_sample_frequency=1,
+            target_sample_frequency=(1 / 60),
+            preserve_input_size=False,
+            ignore_first_timeframe_during_overlap=True,
+            ignore_short_apnea_in_timeframe=False)
+
+
+        # convert resampled annotations (1 or 0) to symbols ('A' or 'N')
+        symbol_resampled_ann = [OneOrZeroToAorN(sample) for sample in resampled_ann]
+
+        # ---------------------------------------------------------------------------------
+        # Write log file with additional information
+        # ---------------------------------------------------------------------------------
+
+        count_apnea = annotations_std_binary.count(1)
+        count_no_apnea = annotations_std_binary.count(0)
+
+        percentage_apnea = count_apnea/len(annotations_std_binary) * 100
+        percentage_no_apnea = count_no_apnea/len(annotations_std_binary) * 100
+
+        with open(target_path_resampling_info, mode='a+',
+                  newline='') as csv_file:
+            fieldnames = \
+                ['RecordName',
+                 'Frequency',
+                 'NumberSamples',
+                 'TotalDuration[h]',
+                 'Apnea[%]',
+                 'NoApnea[%]'
+                 ]
+            writer = csv.DictWriter(csv_file, fieldnames=fieldnames, delimiter='\t')
+
+            # Print header only in first iteration
+            if dataset_i == 0:
+                writer.writeheader()
+
+            writer.writerow({'RecordName': dataset_name,
+                             'TargetFreq': target_freq,
+                             'NumberSamples': num_samp,
                              'TotalDuration[h]': round(record_duration_in_seconds/60/60,2),
                              'Apnea[%]': round(percentage_apnea, 2),
                              'NoApnea[%]': round(percentage_no_apnea,2)

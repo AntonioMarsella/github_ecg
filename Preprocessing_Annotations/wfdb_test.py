@@ -13,7 +13,7 @@ import wfdb
 import Preprocessing_Annotations.ApneaPreprocessing as ap
 
 def OpenApneaECG():
-    db_path = 'datasets\\db1_apnea-ecg\\a01';
+    db_path = 'D:\\StudiumAddidtional\\ACML\\datasets\\db1_apnea-ecg\\a01';
     #db_path = 'datasets\\db3_ucddb\\ucddb002';
 
     record = wfdb.rdrecord(db_path)
@@ -29,6 +29,52 @@ def OpenApneaECG():
     print(ann.symbol)
 
     wfdb.plot_wfdb(record=record, annotation=ann, plot_sym=True, title='Record a1 from Physionet Apnea')
+    return
+
+def GetApneaOccurencesApneaECG():
+    db_dir = 'D:\\StudiumAddidtional\\ACML\\datasets\\db1_apnea-ecg';
+
+    DATA_A_SIZE = 20
+    DATA_B_SIZE = 5
+    DATA_C_SIZE = 10
+
+    for i in range(DATA_A_SIZE - 1):
+        path = db_dir + '\\' + 'a{:02d}'.format(i+1)
+        ann = wfdb.rdann( path, 'apn')
+        apnea = round((ann.symbol.count('A') / len(ann.symbol)) * 100, 2)
+        no_apnea = round((ann.symbol.count('N') / len(ann.symbol)) * 100, 2)
+        print (path + '\t' + str(apnea) + '\t' + str(no_apnea))
+        #print("ann.sample len = ", len(ann.sample))
+        #print(ann.sample)
+
+        #print("ann.symbol len = ", len(ann.symbol))
+        #print(ann.symbol)
+
+
+    for i in range(DATA_B_SIZE - 1):
+        path = db_dir + '\\' + 'b{:02d}'.format(i+1)
+        ann = wfdb.rdann(path, 'apn')
+        apnea = round((ann.symbol.count('A') / len(ann.symbol)) * 100, 2)
+        no_apnea = round((ann.symbol.count('N') / len(ann.symbol)) * 100, 2)
+        print(path + '\t' + str(apnea) + '\t' + str(no_apnea))
+        #print("ann.sample len = ", len(ann.sample))
+        #print(ann.sample)
+
+        #print("ann.symbol len = ", len(ann.symbol))
+        #print(ann.symbol)
+
+    for i in range(DATA_C_SIZE - 1):
+        path = db_dir + '\\' + 'c{:02d}'.format(i+1)
+        ann = wfdb.rdann(path, 'apn')
+        apnea = round((ann.symbol.count('A') / len(ann.symbol)) * 100, 2)
+        no_apnea = round((ann.symbol.count('N') / len(ann.symbol)) * 100, 2)
+        print(path + '\t' + str(apnea) + '\t' + str(no_apnea))
+        #print("ann.sample len = ", len(ann.sample))
+        #print(ann.sample)
+
+        #print("ann.symbol len = ", len(ann.symbol))
+        #print(ann.symbol)
+
     return
 
 def OpenUCDDB():
@@ -214,9 +260,9 @@ def ucddbResampleAnnotationAll():
     return;
 
 # ap.ResampleRecordFile(
-#     record_source_dir = 'D:\\SkyDrive\\Studium\\Maastricht\\Project1\\Period2ResampleAnnotations\\datasets\\db3_ucddb',
+#     record_source_dir = 'D:\\StudiumAddidtional\\ACML\\datasets\\db3_ucddb\\Record100Hz',
 #     record_source_name = 'ucddb002',
-#     record_target_dir = 'D:\\SkyDrive\\Studium\\Maastricht\\Project1\\Period2ResampleAnnotations\\datasets\\db3_ucddb\\ResamplesRecord100Hz',
+#     record_target_dir = 'D:\\StudiumAddidtional\\ACML\\datasets\\db3_ucddb\\ResampledAnn100Hz_OnlyObstructive',
 #     record_target_name = 'ucddb002_100Hz',
 #     target_frequency=100
 # )
@@ -227,15 +273,24 @@ def ucddbResampleAnnotationAll():
 #     target_frequency=100
 # )
 
-OpenUCDDB()
+#OpenUCDDB()
+#OpenApneaECG()
 
-# ap.UCDDB_ResampleAnnotations(
-#     path_source='D:\\SkyDrive\\Studium\\Maastricht\\Project1\\Period2ResampleAnnotations\\datasets\\db3_ucddb\\Record100Hz',
-#     path_target ='D:\\SkyDrive\\Studium\\Maastricht\\Project1\\Period2ResampleAnnotations\\datasets\\db3_ucddb\\ResampledAnn100HzRecord',
-#     target_file_postfix='_Shorter_IgnoreOverlap',
-#     source_file_portfix='_lifecard_100Hz',
-#     preserve_input_size=False,
-#     ignore_first_timeframe_during_overlap=True,
-#     create_annotationfiles_as_ascii=False,
-#     print_log=True
-# )
+#ap.UCDDB_ResampleAnnotations(
+#    path_source='D:\\StudiumAddidtional\\ACML\\datasets\\db3_ucddb\\Record100Hz',
+#    path_target ='D:\\StudiumAddidtional\\ACML\\datasets\\db3_ucddb\\ResampledAnn100Hz_OnlyObstructive',
+#    target_file_postfix='_Shorter_IgnoreOverlap',
+#    source_file_portfix='_lifecard_100Hz',
+#    preserve_input_size=False,
+#    ignore_first_timeframe_during_overlap=True,
+#    create_annotationfiles_as_ascii=False,
+#    print_log=True
+#)
+
+ap.SHHS_CreateRepresentationChunks(
+    dir_source='D:\\GitRepositories\\DSDM\\Period1\\github_ecg\\db_shhs\\edfs\\shhs1',
+    dir_target ='D:\\GitRepositories\\DSDM\\Period1\\github_ecg\\db_shhs\\edfs\\shhs1\\Scalograms',
+    print_log=True
+)
+
+#GetApneaOccurencesApneaECG()
