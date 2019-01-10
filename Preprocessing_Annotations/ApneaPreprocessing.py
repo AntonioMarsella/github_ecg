@@ -1,4 +1,5 @@
-from collections import Counter;
+from collections import Counter
+import os
 import math
 import datetime
 from datetime import datetime
@@ -13,6 +14,11 @@ import csv
 
 import wfdb
 import wfdb.processing
+
+import pywt
+import matplotlib
+import matplotlib.pyplot as plt
+from halo import Halo
 
 # region General core functions
 
@@ -427,6 +433,9 @@ def UCDDB_ResampleAnnotations(
                              'NoApnea[%]': round(percentage_no_apnea,2)
                              })
             print() # new line
+
+        #TODO
+        #createScalograms()
     return
 #endregion
 
@@ -488,7 +497,7 @@ def SHHS_CreateRepresentationChunks(
         # Init
         # -----------------------------------------------------------------------
 
-        dataset_path = dataset_i; # f.ex. ucddb028_lifecard
+        dataset_path = dataset_i  # f.ex. ucddb028_lifecard
 
         print('Starting to process: ', dataset_path)
 
@@ -546,6 +555,8 @@ def SHHS_CreateRepresentationChunks(
         # Write log file with additional information
         # ---------------------------------------------------------------------------------
 
+        dataset_name = dataset_path.split("\\")[-1][:-4]
+
         count_apnea = annotations_std_binary.count(1)
         count_no_apnea = annotations_std_binary.count(0)
 
@@ -556,7 +567,7 @@ def SHHS_CreateRepresentationChunks(
                   newline='') as csv_file:
             fieldnames = \
                 ['RecordName',
-                 'Frequency',
+                 'TargetFreq',
                  'NumberSamples',
                  'TotalDuration[h]',
                  'Apnea[%]',
@@ -576,6 +587,64 @@ def SHHS_CreateRepresentationChunks(
                              'NoApnea[%]': round(percentage_no_apnea,2)
                              })
             print() # new line
+
+        createScalograms(ecg, dataset_path, num_samp, sample_length)
+
     return
 
 # endregion
+
+def createScalograms (ecg, dataset_path, num_samp, sample_length):
+
+    spinner = Halo(text='Processing data... 0/' + str(num_samp - 1), spinner='dots')
+    spinner.start()
+
+    # wavelets
+    w_sz = 128
+    h_sz = 128
+    gc = 0
+    for j in range(0, num_samp):
+        l = j * sample_length
+        h = (j + 1) * sample_length
+
+        if j == (num_samp - 1):
+            break
+
+        sample = ecg[l:h]
+
+        # dt = 0.01
+        wavelet = 'cmor1.5-1.0'
+        scales = np.arange(1, 125)
+        [cfs, frequencies] = pywt.cwt(sample, scales, wavelet)
+        power = (abs(cfs)) ** 2
+
+        plt.ioff()
+
+        f = plt.figure()
+        f.set_size_inches(w_sz, h_sz)
+        time = range(0, sample_length)
+        plt.contourf(time, np.log2(frequencies), power)
+
+        plt.gca().margins(0, 0)
+        plt.gca().set_axis_off()
+        plt.gca().xaxis.set_major_locator(matplotlib.ticker.NullLocator())
+        plt.gca().yaxis.set_major_locator(matplotlib.ticker.NullLocator())
+        plt.gca().set_xticklabels([])
+        plt.gca().set_yticklabels([])
+
+        directory = dataset_path[:-4] + "\\"
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+
+        plt.savefig(directory + 'im' + str(gc).zfill(len(str(num_samp))) + '.png', bbox_inches='tight', pad_inches=0,
+                    dpi=(128.6) / 99)
+        plt.close(f)
+
+        if ((gc + 1) % 1) == 0:
+            spinner.text = 'Processing data... ' + str(gc + 1) + '/' + str(num_samp - 1)
+
+        gc += 1
+
+    spinner.text = 'Processing data... ' + str(num_samp - 1) + '/' + str(num_samp - 1)
+    spinner.succeed()
+
