@@ -449,7 +449,7 @@ def SHHS_getEventsPerSecond(path_annotation_file):
     """
 
     # works for now, but is not guaranteed to be at that index
-    e = xml.etree.ElementTree.parse(path_annotation_file).getroot()[2]
+    e = xml.etree.ElementTree.parse(path_annotation_file).getroot().findall('ScoredEvents')[0]
 
     totalDuration = 0
     for event in e:
