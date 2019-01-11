@@ -484,6 +484,9 @@ def SHHS_CreateRepresentationChunks(
         dir_target,
         print_log=True):
 
+    if not os.path.exists(dir_target):
+        os.makedirs(dir_target)
+
     ecg_chn = 3
     target_freq = 100  # sampling frequency (target)
     sample_seconds = 60  # sample seconds
@@ -532,24 +535,22 @@ def SHHS_CreateRepresentationChunks(
 
         # convert list with annotation types to a simple list with 1 and 0
         # 0 = no apnea, 1 = apnea (the apnea type does not matter)
-        annotations_std_binary = [not (type == 'none') for type in annotations_std_types]
+        #annotations_std_binary = [not (type == 'none') for type in annotations_std_types]
         #annotations_std_binary = [(type == 'APNEA-O') for type in annotations_std_types]
+        annotations_std_binary = [('Obstructive apnea|Obstructive Apnea' in type) for type in annotations_std_types]
+
         # ---------------------------------------------------------------
         # Resampling
         # ---------------------------------------------------------------
 
         # resample annotations
-        resampled_ann = ResampleAnnotations(
+        resampled_ann_binary_short = ResampleAnnotations(
             annotations=annotations_std_binary,
             source_sample_frequency=1,
             target_sample_frequency=(1 / 60),
             preserve_input_size=False,
             ignore_first_timeframe_during_overlap=True,
             ignore_short_apnea_in_timeframe=False)
-
-
-        # convert resampled annotations (1 or 0) to symbols ('A' or 'N')
-        symbol_resampled_ann = [OneOrZeroToAorN(sample) for sample in resampled_ann]
 
         # ---------------------------------------------------------------------------------
         # Write log file with additional information
@@ -588,22 +589,36 @@ def SHHS_CreateRepresentationChunks(
                              })
             print() # new line
 
-        createScalograms(ecg, dataset_path, num_samp, sample_length)
+        createScalograms(ecg, resampled_ann_binary_short, dir_target, num_samp, sample_length)
 
     return
 
 # endregion
 
-def createScalograms (ecg, dataset_path, num_samp, sample_length):
+def createScalograms (ecg, resampled_ann_binary_short, target_path, num_samp, sample_length):
 
     spinner = Halo(text='Processing data... 0/' + str(num_samp - 1), spinner='dots')
     spinner.start()
+
+    target_path_pos = target_path + "\\pos"
+    target_path_neg = target_path + "\\neg"
+
+    if not os.path.exists(target_path):
+        os.makedirs(target_path)
+    if not os.path.exists(target_path_pos):
+        os.makedirs(target_path_pos)
+    if not os.path.exists(target_path_neg):
+        os.makedirs(target_path_neg)
 
     # wavelets
     w_sz = 128
     h_sz = 128
     gc = 0
     for j in range(0, num_samp):
+
+        # 1 = this sample (f.ex. 60 Seconds) contains apnea (0 otherwise)
+        is_apnea_sample = resampled_ann_binary_short[j]
+
         l = j * sample_length
         h = (j + 1) * sample_length
 
@@ -632,11 +647,9 @@ def createScalograms (ecg, dataset_path, num_samp, sample_length):
         plt.gca().set_xticklabels([])
         plt.gca().set_yticklabels([])
 
-        directory = dataset_path[:-4] + "\\"
-        if not os.path.exists(directory):
-            os.makedirs(directory)
+        directory = target_path_pos if is_apnea_sample  else target_path_neg
 
-        plt.savefig(directory + 'im' + str(gc).zfill(len(str(num_samp))) + '.png', bbox_inches='tight', pad_inches=0,
+        plt.savefig(directory + '\\'+'im' + str(gc).zfill(len(str(num_samp))) + '.png', bbox_inches='tight', pad_inches=0,
                     dpi=(128.6) / 99)
         plt.close(f)
 
