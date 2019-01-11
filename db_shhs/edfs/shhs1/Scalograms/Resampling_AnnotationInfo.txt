@@ -1,0 +1,5 @@
+RecordName	TargetFreq	NumberSamples	TotalDuration[h]	Apnea[%]	NoApnea[%]
+shhs1-200002	100	540	8.99	1.72	98.28
+shhs1-200004	100	438	7.29	0.68	99.32
+RecordName	TargetFreq	NumberSamples	TotalDuration[h]	Apnea[%]	NoApnea[%]
+shhs1-200002.edf	100	540	8.99	1.72	98.28

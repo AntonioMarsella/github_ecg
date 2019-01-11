@@ -287,9 +287,25 @@ def ucddbResampleAnnotationAll():
 #    print_log=True
 #)
 
+#datasets = sorted(glob.glob('D:\\GitRepositories\\DSDM\\Period1\\github_ecg\\db_shhs\\edfs\\shhs1\\*.edf'))
+#ap.SHHS_CreateRepresentationChunks(
+#    paths_datasets=datasets,
+#    dir_target ='D:\\GitRepositories\\DSDM\\Period1\\github_ecg\\db_shhs\\edfs\\shhs1\\Scalograms',
+#    database=2,
+#    target_freq=100,
+#    sample_seconds=60,
+#    print_log=True
+#)
+
+
+datasets = sorted(glob.glob('D:\GitRepositories\DSDM\Period1\github_ecg\db3_ucddb\Resampled\Record100Hz\\*.dat'))
+
 ap.SHHS_CreateRepresentationChunks(
-    dir_source='D:\\GitRepositories\\DSDM\\Period1\\github_ecg\\db_shhs\\edfs\\shhs1',
-    dir_target ='D:\\GitRepositories\\DSDM\\Period1\\github_ecg\\db_shhs\\edfs\\shhs1\\Scalograms',
+    paths_datasets=datasets,
+    dir_target ='D:\GitRepositories\DSDM\Period1\github_ecg\db3_ucddb\Resampled\Record100Hz\\Scalograms',
+    database=3,
+    target_freq=100,
+    sample_seconds=60,
     print_log=True
 )
 

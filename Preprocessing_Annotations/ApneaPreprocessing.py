@@ -437,6 +437,19 @@ def UCDDB_ResampleAnnotations(
         #TODO
         #createScalograms()
     return
+
+def UCDDB_readResampledDataset(path_dataset):
+
+    record_name = path_dataset[:-4]
+
+    signals, _ = wfdb.rdsamp(record_name, channels=[1])
+
+    ecg = signals[:,0];
+
+    ann = wfdb.rdann(record_name+'_Shorter_IgnoreOverlap', 'apn')
+    annotations_std_binary = [ (1 if (annotation=='A') else 0) for annotation in ann.symbol]
+
+    return (ecg, annotations_std_binary)
 #endregion
 
 #region SHHS Database (Database 2)
@@ -479,65 +492,79 @@ def SHHS_getEventsPerSecond(path_annotation_file):
 
     return eventsPerSecond
 
+def SHHS_ReadDataset(path_dataset, target_freq, sample_seconds):
+    ecg_chn = 3
+
+    # f.ex. MyPath\\ucddb002_respevt.txt
+    annotation_source_path = path_dataset[:-4] + '-nsrr.xml'
+
+    # get the frequency and duration of the record. This may not be the best way just to get those values
+    # because the signals are loaded too (unnecessary overhead), but this database is not too big...
+    # signals, fields = wfdb.rdsamp(record_source_path)
+
+    file_reader = pyedflib.EdfReader(path_dataset)  # file handle
+
+    # Resample to 100Hz
+
+    ecg, _ = wfdb.processing.resample_sig(
+        file_reader.readSignal(ecg_chn),
+        file_reader.getSampleFrequency(ecg_chn),
+        target_freq)
+
+    # get annotation types for the complete record in 1Hz
+    # (one annotation per second)
+
+    annotations_std_types = SHHS_getEventsPerSecond(annotation_source_path)
+
+    # convert list with annotation types to a simple list with 1 and 0
+    # 0 = no apnea, 1 = apnea (the apnea type does not matter)
+    # annotations_std_binary = [not (type == 'none') for type in annotations_std_types]
+    # annotations_std_binary = [(type == 'APNEA-O') for type in annotations_std_types]
+    annotations_std_binary = [('Obstructive apnea|Obstructive Apnea' in type) for type in annotations_std_types]
+
+    return (ecg, annotations_std_binary)
+
+
+
 def SHHS_CreateRepresentationChunks(
-        dir_source,
+        paths_datasets,
         dir_target,
+        database,
+        target_freq,
+        sample_seconds,
         print_log=True):
 
     if not os.path.exists(dir_target):
         os.makedirs(dir_target)
 
-    ecg_chn = 3
-    target_freq = 100  # sampling frequency (target)
-    sample_seconds = 60  # sample seconds
-    sample_length = sample_seconds * target_freq  # sample length
-
-    datasets = sorted(glob.glob(dir_source + '\\*.edf'))
     # loop through all data sets
-    for dataset_i in datasets:
+
+    for dataset_i in range(len(paths_datasets)):
 
         # -----------------------------------------------------------------------
         # Init
-        # -----------------------------------------------------------------------
-
-        dataset_path = dataset_i  # f.ex. ucddb028_lifecard
-
-        print('Starting to process: ', dataset_path)
-
-        # f.ex. MyPath\\ucddb002_respevt.txt
-        annotation_source_path = dataset_path[:-4] + '-nsrr.xml'
-
+        # ---------------------------------------------------------------
+        dataset_path = paths_datasets[dataset_i]
 
         # f.ex. MyPath\\MySubFolder\\Resampling_AnnotationInfo.txt
         # (used to store informations about the resamlings)
         target_path_resampling_info= dir_target + '\\' + 'Resampling_AnnotationInfo.txt'
 
-        # get the frequency and duration of the record. This may not be the best way just to get those values
-        # because the signals are loaded too (unnecessary overhead), but this database is not too big...
-        #signals, fields = wfdb.rdsamp(record_source_path)
+        print('Starting to process: ', dataset_path)
 
-        file_reader = pyedflib.EdfReader(dataset_path)  # file handle
+        ecg = 0
+        annotations_std_binary = 0
 
-        # Resample to 100Hz
+        if database == 2:
+            ecg, annotations_std_binary = SHHS_ReadDataset(dataset_path, target_freq, sample_seconds)
+        elif database == 3:
+            ecg, annotations_std_binary = UCDDB_readResampledDataset(dataset_path)
+        else:
+            raise Exception('Database unknown!')
 
-        ecg, _ = wfdb.processing.resample_sig(
-            file_reader.readSignal(ecg_chn),
-            file_reader.getSampleFrequency(ecg_chn),
-            target_freq)
-
-        record_duration_in_seconds = int(np.ceil(len(ecg) / target_freq))
+        sample_length = sample_seconds * target_freq  # sample length
         num_samp = int(np.ceil(len(ecg) / sample_length))
-
-        # get annotation types for the complete record in 1Hz
-        # (one annotation per second)
-
-        annotations_std_types = SHHS_getEventsPerSecond(annotation_source_path)
-
-        # convert list with annotation types to a simple list with 1 and 0
-        # 0 = no apnea, 1 = apnea (the apnea type does not matter)
-        #annotations_std_binary = [not (type == 'none') for type in annotations_std_types]
-        #annotations_std_binary = [(type == 'APNEA-O') for type in annotations_std_types]
-        annotations_std_binary = [('Obstructive apnea|Obstructive Apnea' in type) for type in annotations_std_types]
+        record_duration_in_seconds = int(np.ceil(len(ecg) / target_freq))
 
         # ---------------------------------------------------------------
         # Resampling
@@ -552,11 +579,13 @@ def SHHS_CreateRepresentationChunks(
             ignore_first_timeframe_during_overlap=True,
             ignore_short_apnea_in_timeframe=False)
 
+        if database == 3:
+            resampled_ann_binary_short = annotations_std_binary
         # ---------------------------------------------------------------------------------
         # Write log file with additional information
         # ---------------------------------------------------------------------------------
 
-        dataset_name = dataset_path.split("\\")[-1][:-4]
+        dataset_name = dataset_path.split("\\")[-1]
 
         count_apnea = annotations_std_binary.count(1)
         count_no_apnea = annotations_std_binary.count(0)
@@ -589,7 +618,7 @@ def SHHS_CreateRepresentationChunks(
                              })
             print() # new line
 
-        createScalograms(ecg, resampled_ann_binary_short, dir_target, num_samp, sample_length)
+        createScalograms(ecg, resampled_ann_binary_short, dir_target + '\\' + dataset_name, num_samp, sample_length)
 
     return
 
