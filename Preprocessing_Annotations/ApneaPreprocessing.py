@@ -8,6 +8,7 @@ import glob
 from pathlib import Path
 import pyedflib
 import xml.etree.ElementTree
+from itertools import repeat
 
 import numpy as np
 import csv
@@ -439,17 +440,32 @@ def UCDDB_ResampleAnnotations(
     return
 
 def UCDDB_readResampledDataset(path_dataset):
+    """
+    Reads a resampled (to 100Hz) .dat and .apn file. No additional resampling is done here.
+    :param path_dataset:
+    :return: ecg signal of a specific channel (100Hz) and apnea annonations (per minute)
+    """
 
+    # remove file extension, because the wfdb function does not need it
     record_name = path_dataset[:-4]
 
+    # read the ecg signals
     signals, _ = wfdb.rdsamp(record_name, channels=[1])
 
-    ecg = signals[:,0];
+    # just one channel was read, but signals is still a "matrix", reduce the dimension by selecting the 0th col
+    ecg = signals[:,0]
 
+    # read annotations
     ann = wfdb.rdann(record_name+'_Shorter_IgnoreOverlap', 'apn')
-    annotations_std_binary = [ (1 if (annotation=='A') else 0) for annotation in ann.symbol]
 
-    return (ecg, annotations_std_binary)
+    # convert 'A' and 'N' symbols to 1 and 0
+    annotations_per_minute = [ (1 if (annotation=='A') else 0) for annotation in ann.symbol]
+
+    # duplicate the elements so that there is an element per second
+    # this has to be done, because the calling function expects this and I am trying to keep the interfaces easy
+    annotations_per_second = [x for item in annotations_per_minute for x in repeat(item, 60)]
+
+    return (ecg, annotations_per_second)
 #endregion
 
 #region SHHS Database (Database 2)
@@ -492,7 +508,7 @@ def SHHS_getEventsPerSecond(path_annotation_file):
 
     return eventsPerSecond
 
-def SHHS_ReadDataset(path_dataset, target_freq, sample_seconds):
+def SHHS_ReadDataset(path_dataset, target_freq):
     ecg_chn = 3
 
     # f.ex. MyPath\\ucddb002_respevt.txt
@@ -520,13 +536,16 @@ def SHHS_ReadDataset(path_dataset, target_freq, sample_seconds):
     # 0 = no apnea, 1 = apnea (the apnea type does not matter)
     # annotations_std_binary = [not (type == 'none') for type in annotations_std_types]
     # annotations_std_binary = [(type == 'APNEA-O') for type in annotations_std_types]
-    annotations_std_binary = [('Obstructive apnea|Obstructive Apnea' in type) for type in annotations_std_types]
+    annotations_std_binary = [
+        ('Obstructive apnea|Obstructive Apnea' in type
+         or 'Hypopnea|Hypopnea' in type)
+        for type in annotations_std_types]
 
     return (ecg, annotations_std_binary)
 
 
 
-def SHHS_CreateRepresentationChunks(
+def createRepresentationChunks(
         paths_datasets,
         dir_target,
         database,
@@ -556,7 +575,7 @@ def SHHS_CreateRepresentationChunks(
         annotations_std_binary = 0
 
         if database == 2:
-            ecg, annotations_std_binary = SHHS_ReadDataset(dataset_path, target_freq, sample_seconds)
+            ecg, annotations_std_binary = SHHS_ReadDataset(dataset_path, target_freq)
         elif database == 3:
             ecg, annotations_std_binary = UCDDB_readResampledDataset(dataset_path)
         else:
@@ -579,8 +598,6 @@ def SHHS_CreateRepresentationChunks(
             ignore_first_timeframe_during_overlap=True,
             ignore_short_apnea_in_timeframe=False)
 
-        if database == 3:
-            resampled_ann_binary_short = annotations_std_binary
         # ---------------------------------------------------------------------------------
         # Write log file with additional information
         # ---------------------------------------------------------------------------------
@@ -618,26 +635,26 @@ def SHHS_CreateRepresentationChunks(
                              })
             print() # new line
 
-        createScalograms(ecg, resampled_ann_binary_short, dir_target + '\\' + dataset_name, num_samp, sample_length)
+        createScalograms(ecg, resampled_ann_binary_short, dir_target, dataset_name, num_samp, sample_length)
 
     return
 
 # endregion
 
-def createScalograms (ecg, resampled_ann_binary_short, target_path, num_samp, sample_length):
+def createScalograms (ecg, annotation_per_minute, dir_target, dataset_name, num_samp, sample_length):
 
     spinner = Halo(text='Processing data... 0/' + str(num_samp - 1), spinner='dots')
     spinner.start()
 
-    target_path_pos = target_path + "\\pos"
-    target_path_neg = target_path + "\\neg"
+    dir_target_pos = dir_target + '\\' + dataset_name + "\\pos"
+    dir_target_neg = dir_target + '\\' + dataset_name + "\\neg"
 
-    if not os.path.exists(target_path):
-        os.makedirs(target_path)
-    if not os.path.exists(target_path_pos):
-        os.makedirs(target_path_pos)
-    if not os.path.exists(target_path_neg):
-        os.makedirs(target_path_neg)
+    if not os.path.exists(dir_target):
+        os.makedirs(dir_target)
+    if not os.path.exists(dir_target_pos):
+        os.makedirs(dir_target_pos)
+    if not os.path.exists(dir_target_neg):
+        os.makedirs(dir_target_neg)
 
     # wavelets
     w_sz = 128
@@ -645,8 +662,8 @@ def createScalograms (ecg, resampled_ann_binary_short, target_path, num_samp, sa
     gc = 0
     for j in range(0, num_samp):
 
-        # 1 = this sample (f.ex. 60 Seconds) contains apnea (0 otherwise)
-        is_apnea_sample = resampled_ann_binary_short[j]
+        # 1 = this sample (60 Seconds) contains apnea (0 otherwise)
+        is_apnea_sample = annotation_per_minute[j]
 
         l = j * sample_length
         h = (j + 1) * sample_length
@@ -664,6 +681,25 @@ def createScalograms (ecg, resampled_ann_binary_short, target_path, num_samp, sa
 
         plt.ioff()
 
+        directory = dir_target_pos if is_apnea_sample else dir_target_neg
+        apnea_symbol = 'A' if is_apnea_sample else 'N'
+
+        file_name_raw = directory + '\\' + dataset_name + str(gc).zfill(
+            len(str(num_samp))) + '_' + apnea_symbol + '_RAW_' + '.png'
+        file_name_scalogram = directory + '\\' + dataset_name + str(gc).zfill(
+            len(str(num_samp))) + '_' + apnea_symbol + '_SCA_' + '.png'
+
+        # save plot of raw data
+        f = plt.figure()
+        f.set_size_inches(w_sz / 10, h_sz / 10)
+        time = range(0, sample_length)
+        plt.plot(time, sample)
+        plt.savefig(file_name_raw,
+                    bbox_inches='tight',
+                    pad_inches=0)
+        plt.close(f)
+
+        # save plot of scalogram
         f = plt.figure()
         f.set_size_inches(w_sz, h_sz)
         time = range(0, sample_length)
@@ -676,9 +712,9 @@ def createScalograms (ecg, resampled_ann_binary_short, target_path, num_samp, sa
         plt.gca().set_xticklabels([])
         plt.gca().set_yticklabels([])
 
-        directory = target_path_pos if is_apnea_sample  else target_path_neg
-
-        plt.savefig(directory + '\\'+'im' + str(gc).zfill(len(str(num_samp))) + '.png', bbox_inches='tight', pad_inches=0,
+        plt.savefig(file_name_scalogram,
+                    bbox_inches = 'tight',
+                    pad_inches=0,
                     dpi=(128.6) / 99)
         plt.close(f)
 
@@ -689,4 +725,3 @@ def createScalograms (ecg, resampled_ann_binary_short, target_path, num_samp, sa
 
     spinner.text = 'Processing data... ' + str(num_samp - 1) + '/' + str(num_samp - 1)
     spinner.succeed()
-
