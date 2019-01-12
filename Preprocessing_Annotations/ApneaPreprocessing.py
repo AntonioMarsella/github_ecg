@@ -465,7 +465,7 @@ def UCDDB_readResampledDataset(path_dataset):
     # this has to be done, because the calling function expects this and I am trying to keep the interfaces easy
     annotations_per_second = [x for item in annotations_per_minute for x in repeat(item, 60)]
 
-    return (ecg, annotations_per_second)
+    return (ecg, annotations_per_second, ann.symbol)
 #endregion
 
 #region SHHS Database (Database 2)
@@ -541,7 +541,7 @@ def SHHS_ReadDataset(path_dataset, target_freq):
          or 'Hypopnea|Hypopnea' in type)
         for type in annotations_std_types]
 
-    return (ecg, annotations_std_binary)
+    return (ecg, annotations_std_binary, annotations_std_types)
 
 
 
@@ -564,10 +564,16 @@ def createRepresentationChunks(
         # Init
         # ---------------------------------------------------------------
         dataset_path = paths_datasets[dataset_i]
+        dataset_name = dataset_path.split("\\")[-1]
+
+        if not os.path.exists(dir_target+'\\'+dataset_name):
+            os.makedirs(dir_target+'\\'+dataset_name)
 
         # f.ex. MyPath\\MySubFolder\\Resampling_AnnotationInfo.txt
         # (used to store informations about the resamlings)
-        target_path_resampling_info= dir_target + '\\' + 'Resampling_AnnotationInfo.txt'
+        target_path_resampling_info = dir_target + '\\' + 'Resampling_AnnotationInfo.txt'
+        target_path_apnea_signals = dir_target + '\\'+dataset_name + '\\' + 'ApneaSignals.txt'
+
 
         print('Starting to process: ', dataset_path)
 
@@ -575,9 +581,9 @@ def createRepresentationChunks(
         annotations_std_binary = 0
 
         if database == 2:
-            ecg, annotations_std_binary = SHHS_ReadDataset(dataset_path, target_freq)
+            ecg, annotations_std_binary, annotations_std_types = SHHS_ReadDataset(dataset_path, target_freq)
         elif database == 3:
-            ecg, annotations_std_binary = UCDDB_readResampledDataset(dataset_path)
+            ecg, annotations_std_binary, annotations_std_types = UCDDB_readResampledDataset(dataset_path)
         else:
             raise Exception('Database unknown!')
 
@@ -590,19 +596,20 @@ def createRepresentationChunks(
         # ---------------------------------------------------------------
 
         # resample annotations
-        resampled_ann_binary_short = ResampleAnnotations(
+        resampled_ann_per_sec = ResampleAnnotations(
             annotations=annotations_std_binary,
             source_sample_frequency=1,
             target_sample_frequency=(1 / 60),
-            preserve_input_size=False,
+            preserve_input_size=True,
             ignore_first_timeframe_during_overlap=True,
             ignore_short_apnea_in_timeframe=False)
+
+        # save the apnea signal
+        saveApneaSignals(target_path_apnea_signals, annotations_std_types, annotations_std_binary, resampled_ann_per_sec)
 
         # ---------------------------------------------------------------------------------
         # Write log file with additional information
         # ---------------------------------------------------------------------------------
-
-        dataset_name = dataset_path.split("\\")[-1]
 
         count_apnea = annotations_std_binary.count(1)
         count_no_apnea = annotations_std_binary.count(0)
@@ -635,13 +642,13 @@ def createRepresentationChunks(
                              })
             print() # new line
 
-        createScalograms(ecg, resampled_ann_binary_short, dir_target, dataset_name, num_samp, sample_length)
+        createScalograms(ecg, resampled_ann_per_sec, dir_target, dataset_name, num_samp, sample_length)
 
     return
 
 # endregion
 
-def createScalograms (ecg, annotation_per_minute, dir_target, dataset_name, num_samp, sample_length):
+def createScalograms (ecg, annotation_per_sec, dir_target, dataset_name, num_samp, sample_length):
 
     spinner = Halo(text='Processing data... 0/' + str(num_samp - 1), spinner='dots')
     spinner.start()
@@ -663,7 +670,7 @@ def createScalograms (ecg, annotation_per_minute, dir_target, dataset_name, num_
     for j in range(0, num_samp):
 
         # 1 = this sample (60 Seconds) contains apnea (0 otherwise)
-        is_apnea_sample = annotation_per_minute[j]
+        is_apnea_sample = annotation_per_sec[j*60]
 
         l = j * sample_length
         h = (j + 1) * sample_length
@@ -681,6 +688,7 @@ def createScalograms (ecg, annotation_per_minute, dir_target, dataset_name, num_
 
         plt.ioff()
 
+        # create paths and filenames
         directory = dir_target_pos if is_apnea_sample else dir_target_neg
         apnea_symbol = 'A' if is_apnea_sample else 'N'
 
@@ -701,7 +709,7 @@ def createScalograms (ecg, annotation_per_minute, dir_target, dataset_name, num_
 
         # save plot of scalogram
         f = plt.figure()
-        f.set_size_inches(w_sz, h_sz)
+        f.set_size_inches(w_sz*5, h_sz*5)
         time = range(0, sample_length)
         plt.contourf(time, np.log2(frequencies), power)
 
@@ -725,3 +733,24 @@ def createScalograms (ecg, annotation_per_minute, dir_target, dataset_name, num_
 
     spinner.text = 'Processing data... ' + str(num_samp - 1) + '/' + str(num_samp - 1)
     spinner.succeed()
+
+def saveApneaSignals(target_path, annotations_std_type, annotations_std_binary, annotations_resampled):
+
+    with open(target_path, mode='w+', newline='') as csv_file:
+        fieldnames = \
+            ['Second',
+             'Apnea Type',
+             'Apnea yes/no',
+             'Apnea yes/no Resampled',
+             ]
+        writer = csv.DictWriter(csv_file, fieldnames=fieldnames, delimiter='\t')
+
+        writer.writeheader()
+
+        for i in range(len(annotations_std_type)):
+            writer.writerow({
+                             'Second': i,
+                             'Apnea Type': annotations_std_type[i],
+                             'Apnea yes/no': annotations_std_binary[i],
+                             'Apnea yes/no Resampled': annotations_resampled[i]
+                             })
