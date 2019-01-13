@@ -551,7 +551,7 @@ def createRepresentationChunks(
         database,
         target_freq,
         sample_seconds,
-        print_log=True):
+        create_additional_info=True):
 
     if not os.path.exists(dir_target):
         os.makedirs(dir_target)
@@ -572,7 +572,7 @@ def createRepresentationChunks(
         # f.ex. MyPath\\MySubFolder\\Resampling_AnnotationInfo.txt
         # (used to store informations about the resamlings)
         target_path_resampling_info = dir_target + '\\' + 'Resampling_AnnotationInfo.txt'
-        target_path_apnea_signals = dir_target + '\\'+dataset_name + '\\' + 'ApneaSignals.txt'
+        target_path_apnea_signals = dir_target + '\\' + dataset_name + '\\' + dataset_name + '_ApneaSignals.txt'
 
 
         print('Starting to process: ', dataset_path)
@@ -604,7 +604,6 @@ def createRepresentationChunks(
             ignore_first_timeframe_during_overlap=True,
             ignore_short_apnea_in_timeframe=False)
 
-        # save the apnea signal
         saveApneaSignals(target_path_apnea_signals, annotations_std_types, annotations_std_binary, resampled_ann_per_sec)
 
         # ---------------------------------------------------------------------------------
@@ -642,13 +641,13 @@ def createRepresentationChunks(
                              })
             print() # new line
 
-        createScalograms(ecg, resampled_ann_per_sec, dir_target, dataset_name, num_samp, sample_length)
+        createScalograms(ecg, resampled_ann_per_sec, dir_target, dataset_name, num_samp, sample_length, create_additional_info)
 
     return
 
 # endregion
 
-def createScalograms (ecg, annotation_per_sec, dir_target, dataset_name, num_samp, sample_length):
+def createScalograms (ecg, annotation_per_sec, dir_target, dataset_name, num_samp, sample_length, create_additional_info):
 
     spinner = Halo(text='Processing data... 0/' + str(num_samp - 1), spinner='dots')
     spinner.start()
@@ -664,8 +663,8 @@ def createScalograms (ecg, annotation_per_sec, dir_target, dataset_name, num_sam
         os.makedirs(dir_target_neg)
 
     # wavelets
-    w_sz = 128
-    h_sz = 128
+    w_sz = 64
+    h_sz = 64
     gc = 0
     for j in range(0, num_samp):
 
@@ -696,20 +695,42 @@ def createScalograms (ecg, annotation_per_sec, dir_target, dataset_name, num_sam
             len(str(num_samp))) + '_' + apnea_symbol + '_RAW_' + '.png'
         file_name_scalogram = directory + '\\' + dataset_name + str(gc).zfill(
             len(str(num_samp))) + '_' + apnea_symbol + '_SCA_' + '.png'
+        file_name_scalogram_small = directory + '\\' + dataset_name + str(gc).zfill(
+            len(str(num_samp))) + '_' + apnea_symbol + '_SCA_small' + '.png'
 
-        # save plot of raw data
-        f = plt.figure()
-        f.set_size_inches(w_sz / 10, h_sz / 10)
-        time = range(0, sample_length)
-        plt.plot(time, sample)
-        plt.savefig(file_name_raw,
-                    bbox_inches='tight',
-                    pad_inches=0)
-        plt.close(f)
+        if create_additional_info:
+            # save plot of raw data
+            f = plt.figure()
+            f.set_size_inches(w_sz / 10, h_sz / 10)
+            time = range(0, sample_length)
+            plt.plot(time, sample)
+            plt.savefig(file_name_raw,
+                        bbox_inches='tight',
+                        pad_inches=0)
+            plt.close(f)
 
-        # save plot of scalogram
+            # save plot of scalogram
+            f = plt.figure()
+            f.set_size_inches(w_sz*5, h_sz*5)
+            time = range(0, sample_length)
+            plt.contourf(time, np.log2(frequencies), power)
+
+            plt.gca().margins(0, 0)
+            plt.gca().set_axis_off()
+            plt.gca().xaxis.set_major_locator(matplotlib.ticker.NullLocator())
+            plt.gca().yaxis.set_major_locator(matplotlib.ticker.NullLocator())
+            plt.gca().set_xticklabels([])
+            plt.gca().set_yticklabels([])
+
+            plt.savefig(file_name_scalogram,
+                        bbox_inches = 'tight',
+                        pad_inches=0,
+                        dpi=(128.6) / 99)
+            plt.close(f)
+
+        # save small plot of scalogram
         f = plt.figure()
-        f.set_size_inches(w_sz*5, h_sz*5)
+        f.set_size_inches(w_sz, h_sz)
         time = range(0, sample_length)
         plt.contourf(time, np.log2(frequencies), power)
 
@@ -720,8 +741,8 @@ def createScalograms (ecg, annotation_per_sec, dir_target, dataset_name, num_sam
         plt.gca().set_xticklabels([])
         plt.gca().set_yticklabels([])
 
-        plt.savefig(file_name_scalogram,
-                    bbox_inches = 'tight',
+        plt.savefig(file_name_scalogram_small,
+                    bbox_inches='tight',
                     pad_inches=0,
                     dpi=(128.6) / 99)
         plt.close(f)

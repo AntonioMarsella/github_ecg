@@ -1,14 +1,20 @@
 import glob
 import Preprocessing_Annotations.ApneaPreprocessing as ap
 
+# DON'T CHANGE!
+target_freq=100
+sample_seconds=60
+
 datasets = sorted(glob.glob('D:\\GitRepositories\\DSDM\\Period1\\github_ecg\\db_shhs\\edfs\\shhs1\\*.edf'))
+del datasets[0]
+del datasets[0]
 ap.createRepresentationChunks(
     paths_datasets=datasets,
-    dir_target ='D:\\GitRepositories\\DSDM\\Period1\\github_ecg\\db_shhs\\edfs\\shhs1\\Scalograms',
-    database=2,
-    target_freq=100, # must be 100, can't be changed (!)
-    sample_seconds=60, # must be 60, can't be changed (!)
-    print_log=True
+    dir_target = 'D:\\GitRepositories\\DSDM\\Period1\\github_ecg\\db_shhs\\edfs\\shhs1\\Scalograms',
+    database = 2,
+    target_freq = target_freq,
+    sample_seconds = sample_seconds,
+    create_additional_info = False
 )
 
 
@@ -20,8 +26,8 @@ datasets = sorted(glob.glob('D:\GitRepositories\DSDM\Period1\github_ecg\db3_ucdd
 ap.createRepresentationChunks(
     paths_datasets=datasets,
     dir_target ='D:\GitRepositories\DSDM\Period1\github_ecg\db3_ucddb\Resampled\Record100Hz\\Scalograms',
-    database=3,
-    target_freq=100, # must be 100, can't be changed (!)
-    sample_seconds=60, # must be 60, can't be changed (!)
-    print_log=True
+    database = 3,
+    target_freq = target_freq,
+    sample_seconds = sample_seconds,
+    create_additional_info = False
 )
