@@ -6,8 +6,8 @@ target_freq=100
 sample_seconds=60
 
 datasets = sorted(glob.glob('D:\\GitRepositories\\DSDM\\Period1\\github_ecg\\db_shhs\\edfs\\shhs1\\*.edf'))
-del datasets[0]
-del datasets[0]
+#del datasets[0]
+#del datasets[0]
 ap.createRepresentationChunks(
     paths_datasets=datasets,
     dir_target = 'D:\\GitRepositories\\DSDM\\Period1\\github_ecg\\db_shhs\\edfs\\shhs1\\Scalograms',
