@@ -464,8 +464,9 @@ def UCDDB_readResampledDataset(path_dataset):
     # duplicate the elements so that there is an element per second
     # this has to be done, because the calling function expects this and I am trying to keep the interfaces easy
     annotations_per_second = [x for item in annotations_per_minute for x in repeat(item, 60)]
+    annotations_per_second_symbol = [x for item in ann.symbol for x in repeat(item, 60)]
 
-    return (ecg, annotations_per_second, ann.symbol)
+    return (ecg, annotations_per_second, annotations_per_second_symbol)
 #endregion
 
 #region SHHS Database (Database 2)
