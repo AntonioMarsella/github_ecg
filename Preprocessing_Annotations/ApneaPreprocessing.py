@@ -25,7 +25,7 @@ from halo import Halo
 
 def IsFirstApneaOverlapInterval(intervall):
     """
-    Check is this intervall can be seen as a "first overlap interval". This function is used to handle overlaps (regarding intervalls) of apnea occurences.
+    Check if this intervall can be seen as a "first overlap interval". This function is used to handle overlaps (regarding intervalls) of apnea occurences.
     :param intervall: List with apnea indicators (0 and 1)
     :return:
     """
@@ -114,7 +114,7 @@ def OneOrZeroToAorN(number):
         symbol = 'A'
     return symbol
 
-# NOT NEEDED
+# NOT USED
 def ResampleRecordFile(record_source_dir, record_source_name, record_target_dir, record_target_name, target_frequency):
     '''
     Creates a new record file with a new frequency. Uses wfdb functions
@@ -155,6 +155,7 @@ def ResampleRecordFile(record_source_dir, record_source_name, record_target_dir,
 
     return
 
+# NOT USED
 def ResampleRecordFiles(record_source_dir, record_target_dir, target_frequency):
     '''
     Resamples alle records (.dat) in a directory (annotations are ignored).
@@ -269,6 +270,7 @@ def UCDDB_LoadAnnonationsTXTFileStandardized(source_file, start_time, duration_i
 
     return full_type;
 
+# NOT USED
 def UCDDB_ResampleAnnotations(
         path_source,
         path_target,
@@ -538,13 +540,174 @@ def SHHS_ReadDataset(path_dataset, target_freq):
     # annotations_std_binary = [not (type == 'none') for type in annotations_std_types]
     # annotations_std_binary = [(type == 'APNEA-O') for type in annotations_std_types]
     annotations_std_binary = [
-        ('Obstructive apnea|Obstructive Apnea' in type
-         or 'Hypopnea|Hypopnea' in type)
+        ('Obstructive apnea|Obstructive Apnea' in type or
+         'Hypopnea|Hypopnea' in type or
+         'Central apnea|Central Apnea' in type or
+         'Mixed apnea|Mixed Apnea' in type)
         for type in annotations_std_types]
 
     return (ecg, annotations_std_binary, annotations_std_types)
 
+def SHHS_getAllAnnotationTypes(dir_annotation_files):
+    """
+    This function scans all annotations files of the shhs database and returns all available annotation types.
+    :param dir_annotation_files:
+    :return:
+    """
+    annotation_types=[];
 
+    annnotation_files = sorted(glob.glob(dir_annotation_files+ '\\*-nsrr.xml'))
+
+    for annnotation_file in annnotation_files:
+        print("Looking in annotation file " + annnotation_file)
+        e = xml.etree.ElementTree.parse(annnotation_file).getroot().findall('ScoredEvents')[0]
+
+        for event in e:
+            concept = event.findtext('EventConcept')
+            # use this for all events
+            if concept not in annotation_types:
+                annotation_types.append(concept)
+    return annotation_types
+# endregion
+
+def createScalograms (ecg, annotation_per_sec, dir_target, dataset_name, num_samp, sample_length, sample_seconds, create_additional_info):
+
+    spinner = Halo(text='Processing data... 0/' + str(num_samp - 1), spinner='dots')
+    spinner.start()
+
+    dir_target_pos = dir_target + '\\' + dataset_name + "\\pos"
+    dir_target_neg = dir_target + '\\' + dataset_name + "\\neg"
+
+    if not os.path.exists(dir_target):
+        os.makedirs(dir_target)
+    if not os.path.exists(dir_target_pos):
+        os.makedirs(dir_target_pos)
+    if not os.path.exists(dir_target_neg):
+        os.makedirs(dir_target_neg)
+
+    # wavelets
+    w_sz = 128
+    h_sz = 128
+    gc = 0
+    for j in range(0, num_samp):
+    #for j in range(157, 162):
+
+        # 1 = this sample (60 Seconds) contains apnea (0 otherwise)
+
+        is_apnea_sample = annotation_per_sec[j*sample_seconds]
+
+        l = j * sample_length
+        h = (j + 1) * sample_length
+
+        if j == (num_samp - 1):
+            break
+
+        sample = ecg[l:h]
+
+        # dt = 0.01
+        wavelet = 'cmor1.5-1.0'
+        scales = np.arange(1, 125)
+        [cfs, frequencies] = pywt.cwt(sample, scales, wavelet)
+        power = (abs(cfs)) ** 1
+
+        plt.ioff()
+
+        # create paths and filenames
+        directory = dir_target_pos if is_apnea_sample else dir_target_neg
+        apnea_symbol = 'A' if is_apnea_sample else 'N'
+
+        file_name_raw = directory + '\\' + dataset_name + str(gc).zfill(
+            len(str(num_samp))) + '_' + apnea_symbol + '_RAW_' + '.png'
+        file_name_scalogram = directory + '\\' + dataset_name + str(gc).zfill(
+            len(str(num_samp))) + '_' + apnea_symbol + '_SCA_' + '.png'
+        file_name_scalogram_small = directory + '\\' + dataset_name + str(gc).zfill(
+            len(str(num_samp))) + '_' + apnea_symbol + '_SCA_small' + '.png'
+
+        if create_additional_info:
+            # save plot of raw data
+            f = plt.figure()
+            f.set_size_inches(w_sz / 10, h_sz / 10)
+            time = range(0, sample_length)
+            plt.plot(time, sample)
+            plt.savefig(file_name_raw,
+                        bbox_inches='tight',
+                        pad_inches=0)
+            plt.close(f)
+
+            # save plot of scalogram
+            #f = plt.figure()
+            #f.set_size_inches(w_sz*5, h_sz*5)
+            #time = range(0, sample_length)
+            #plt.contourf(time, np.log2(frequencies), power)
+
+            #plt.gca().margins(0, 0)
+            #plt.gca().set_axis_off()
+            #plt.gca().xaxis.set_major_locator(matplotlib.ticker.NullLocator())
+            #plt.gca().yaxis.set_major_locator(matplotlib.ticker.NullLocator())
+            #plt.gca().set_xticklabels([])
+            #plt.gca().set_yticklabels([])
+
+            #plt.savefig(file_name_scalogram,
+            #            bbox_inches = 'tight',
+            #            pad_inches=0,
+            #            dpi=(128.6) / 99)
+            #plt.close(f)
+
+        # save small plot of scalogram
+        f = plt.figure()
+        f.set_size_inches(w_sz, h_sz)
+        time = range(0, sample_length)
+        plt.contourf(time, np.log2(frequencies), power)
+
+        plt.gca().margins(0, 0)
+        plt.gca().set_axis_off()
+        plt.gca().xaxis.set_major_locator(matplotlib.ticker.NullLocator())
+        plt.gca().yaxis.set_major_locator(matplotlib.ticker.NullLocator())
+        plt.gca().set_xticklabels([])
+        plt.gca().set_yticklabels([])
+
+        plt.savefig(file_name_scalogram_small,
+                    bbox_inches='tight',
+                    pad_inches=0,
+                    dpi=(128.6) / 99)
+        plt.close(f)
+
+        if ((gc + 1) % 1) == 0:
+            spinner.text = 'Processing data... ' + str(gc + 1) + '/' + str(num_samp - 1)
+
+        gc += 1
+
+    spinner.text = 'Processing data... ' + str(num_samp - 1) + '/' + str(num_samp - 1)
+    spinner.succeed()
+
+
+def saveApneaSignals(target_path, annotations_std_type, annotations_std_binary, annotations_resampled):
+    """
+    This function saves the original and resampled apnea signal into a ascii file, to be able to check the annotations afterwards.
+    :param target_path:
+    :param annotations_std_type: list with annotation-types (strings, not all types are viewed as apnea)
+    :param annotations_std_binary: list with apnea-flags (1="apnea", 0="no apnea")
+    :param annotations_resampled: resampled apnea signal (1="apnea", 0="no apnea")
+    :return:
+    """
+    with open(target_path, mode='w+', newline='') as csv_file:
+        fieldnames = \
+            ['Second',
+             'Apnea Type',
+             'Apnea yes/no',
+             'Apnea yes/no Resampled',
+             ]
+        writer = csv.DictWriter(csv_file, fieldnames=fieldnames, delimiter='\t')
+
+        writer.writeheader()
+
+        for i in range(len(annotations_std_type)):
+            writer.writerow({
+                             'Second': i,
+                             'Apnea Type': annotations_std_type[i],
+                             'Apnea yes/no': annotations_std_binary[i],
+                             'Apnea yes/no Resampled': annotations_resampled[i]
+                             })
 
 def createRepresentationChunks(
         paths_datasets,
@@ -553,6 +716,16 @@ def createRepresentationChunks(
         target_freq,
         sample_seconds,
         create_additional_info=True):
+    """
+    This is the main function to create the chunks (f.ex. 1 minute images/scalograms).
+    :param paths_datasets: directory of the datasets
+    :param dir_target: target directory for results (this dir and all sub dirs will be created, but the all parent directories must exists!)
+    :param database: 2 = ucddb, 3 = shhs (1 not supported yet)
+    :param target_freq:
+    :param sample_seconds: length of chuck (f.ex. 60 seconds)
+    :param create_additional_info: True=images of raw signals will be saved too
+    :return:
+    """
 
     if not os.path.exists(dir_target):
         os.makedirs(dir_target)
@@ -642,137 +815,6 @@ def createRepresentationChunks(
                              })
             print() # new line
 
-        createScalograms(ecg, resampled_ann_per_sec, dir_target, dataset_name, num_samp, sample_length, create_additional_info)
+        #createScalograms(ecg, resampled_ann_per_sec, dir_target, dataset_name, num_samp, sample_length, sample_seconds, create_additional_info)
 
     return
-
-# endregion
-
-def createScalograms (ecg, annotation_per_sec, dir_target, dataset_name, num_samp, sample_length, create_additional_info):
-
-    spinner = Halo(text='Processing data... 0/' + str(num_samp - 1), spinner='dots')
-    spinner.start()
-
-    dir_target_pos = dir_target + '\\' + dataset_name + "\\pos"
-    dir_target_neg = dir_target + '\\' + dataset_name + "\\neg"
-
-    if not os.path.exists(dir_target):
-        os.makedirs(dir_target)
-    if not os.path.exists(dir_target_pos):
-        os.makedirs(dir_target_pos)
-    if not os.path.exists(dir_target_neg):
-        os.makedirs(dir_target_neg)
-
-    # wavelets
-    w_sz = 64
-    h_sz = 64
-    gc = 0
-    for j in range(0, num_samp):
-
-        # 1 = this sample (60 Seconds) contains apnea (0 otherwise)
-        is_apnea_sample = annotation_per_sec[j*60]
-
-        l = j * sample_length
-        h = (j + 1) * sample_length
-
-        if j == (num_samp - 1):
-            break
-
-        sample = ecg[l:h]
-
-        # dt = 0.01
-        wavelet = 'cmor1.5-1.0'
-        scales = np.arange(1, 125)
-        [cfs, frequencies] = pywt.cwt(sample, scales, wavelet)
-        power = (abs(cfs)) ** 2
-
-        plt.ioff()
-
-        # create paths and filenames
-        directory = dir_target_pos if is_apnea_sample else dir_target_neg
-        apnea_symbol = 'A' if is_apnea_sample else 'N'
-
-        file_name_raw = directory + '\\' + dataset_name + str(gc).zfill(
-            len(str(num_samp))) + '_' + apnea_symbol + '_RAW_' + '.png'
-        file_name_scalogram = directory + '\\' + dataset_name + str(gc).zfill(
-            len(str(num_samp))) + '_' + apnea_symbol + '_SCA_' + '.png'
-        file_name_scalogram_small = directory + '\\' + dataset_name + str(gc).zfill(
-            len(str(num_samp))) + '_' + apnea_symbol + '_SCA_small' + '.png'
-
-        if create_additional_info:
-            # save plot of raw data
-            f = plt.figure()
-            f.set_size_inches(w_sz / 10, h_sz / 10)
-            time = range(0, sample_length)
-            plt.plot(time, sample)
-            plt.savefig(file_name_raw,
-                        bbox_inches='tight',
-                        pad_inches=0)
-            plt.close(f)
-
-            # save plot of scalogram
-            f = plt.figure()
-            f.set_size_inches(w_sz*5, h_sz*5)
-            time = range(0, sample_length)
-            plt.contourf(time, np.log2(frequencies), power)
-
-            plt.gca().margins(0, 0)
-            plt.gca().set_axis_off()
-            plt.gca().xaxis.set_major_locator(matplotlib.ticker.NullLocator())
-            plt.gca().yaxis.set_major_locator(matplotlib.ticker.NullLocator())
-            plt.gca().set_xticklabels([])
-            plt.gca().set_yticklabels([])
-
-            plt.savefig(file_name_scalogram,
-                        bbox_inches = 'tight',
-                        pad_inches=0,
-                        dpi=(128.6) / 99)
-            plt.close(f)
-
-        # save small plot of scalogram
-        f = plt.figure()
-        f.set_size_inches(w_sz, h_sz)
-        time = range(0, sample_length)
-        plt.contourf(time, np.log2(frequencies), power)
-
-        plt.gca().margins(0, 0)
-        plt.gca().set_axis_off()
-        plt.gca().xaxis.set_major_locator(matplotlib.ticker.NullLocator())
-        plt.gca().yaxis.set_major_locator(matplotlib.ticker.NullLocator())
-        plt.gca().set_xticklabels([])
-        plt.gca().set_yticklabels([])
-
-        plt.savefig(file_name_scalogram_small,
-                    bbox_inches='tight',
-                    pad_inches=0,
-                    dpi=(128.6) / 99)
-        plt.close(f)
-
-        if ((gc + 1) % 1) == 0:
-            spinner.text = 'Processing data... ' + str(gc + 1) + '/' + str(num_samp - 1)
-
-        gc += 1
-
-    spinner.text = 'Processing data... ' + str(num_samp - 1) + '/' + str(num_samp - 1)
-    spinner.succeed()
-
-def saveApneaSignals(target_path, annotations_std_type, annotations_std_binary, annotations_resampled):
-
-    with open(target_path, mode='w+', newline='') as csv_file:
-        fieldnames = \
-            ['Second',
-             'Apnea Type',
-             'Apnea yes/no',
-             'Apnea yes/no Resampled',
-             ]
-        writer = csv.DictWriter(csv_file, fieldnames=fieldnames, delimiter='\t')
-
-        writer.writeheader()
-
-        for i in range(len(annotations_std_type)):
-            writer.writerow({
-                             'Second': i,
-                             'Apnea Type': annotations_std_type[i],
-                             'Apnea yes/no': annotations_std_binary[i],
-                             'Apnea yes/no Resampled': annotations_resampled[i]
-                             })
