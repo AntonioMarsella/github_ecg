@@ -1,5 +1,8 @@
 import unittest
 import Preprocessing_Annotations.ApneaPreprocessing as ap;
+import numpy as np
+import pprint
+import csv
 
 class IsFirstApneaOverlapInterval(unittest.TestCase):
     def test_NoOverlapInterval_1(self):
@@ -199,6 +202,58 @@ class ResampleAnnotations(unittest.TestCase):
         output_apnea_signal = ap.ResampleAnnotations(input_apnea_signal, 5, 1, False, True, False);
 
         self.assertEqual(expected_apnea_signal, output_apnea_signal)
+
+class DetectInvalildSignal(unittest.TestCase):
+    def test_shhs_200002(self):
+        path = 'D:\\GitRepositories\\DSDM\\Period1\\github_ecg\\db_shhs\\edfs\\shhs1\\shhs1-200002.edf'
+        ecg,_,_ = ap.SHHS_ReadDataset(path, 100)
+
+        sample_length = 6000
+        num_samp = int(np.ceil(len(ecg) / sample_length))
+
+        result = []
+        for j in range(num_samp):
+            l = j * sample_length
+            h = (j + 1) * sample_length
+
+            if j == (num_samp - 1):
+                break
+
+            sample = ecg[l:h]
+
+            validity = ap.isValidECGChunk(sample)
+            result.append(validity)
+
+        expected = np.array([True] * num_samp)
+
+        invalid_elements = [56, 57, 59, 60, 81, 82, 85, 155, 156, 159, 160, 198, 202, 205, 225, 226, 229, 230, 231, 232]
+        for i in invalid_elements:
+            expected[i] = False
+        expected[232:num_samp-1] = False # rest of array is invalid
+        for i in range(expected.size):
+            print (str(i) + ': ' + str(expected[i]))
+
+        with open('DetectInvalildSignal_test_shhs_200002.txt', mode='w+',
+                  newline='') as csv_file:
+            fieldnames = \
+                ['expected',
+                 'result',
+                 ]
+            writer = csv.DictWriter(csv_file, fieldnames=fieldnames, delimiter='\t')
+            for i in range(expected.size-1):
+                writer.writerow({'expected': expected[i],
+                                 'result': result[i],
+                                 })
+            number_errors = 0
+            for i in range(expected.size - 1):
+                if expected[i] != result[i]:
+                    number_errors += 1
+            writer.writerow({'expected': 'test_shhs_200002: '+ 'error_num=' + str(number_errors) + ', error[%]='+ str((number_errors/num_samp)*100),
+                             'result': "",
+                             })
+
+        self.assertEqual(result, expected)
+
 
 # run all test cases
 if __name__ == '__main__':

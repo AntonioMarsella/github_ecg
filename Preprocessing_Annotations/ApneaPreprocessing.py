@@ -9,9 +9,14 @@ from pathlib import Path
 import pyedflib
 import xml.etree.ElementTree
 from itertools import repeat
+import Preprocessing_Annotations.bwr.bwr as b
+
+from concurrent.futures import ThreadPoolExecutor
+from tqdm import tqdm
 
 import numpy as np
 import csv
+import pandas as pd
 
 import wfdb
 import wfdb.processing
@@ -575,6 +580,9 @@ def createScalograms (ecg, annotation_per_sec, dir_target, dataset_name, num_sam
     spinner = Halo(text='Processing data... 0/' + str(num_samp - 1), spinner='dots')
     spinner.start()
 
+    # Call the BWR method
+    (baseline, ecg_bwr) = b.bwr(ecg)
+
     dir_target_pos = dir_target + '\\' + dataset_name + "\\pos"
     dir_target_neg = dir_target + '\\' + dataset_name + "\\neg"
 
@@ -585,15 +593,19 @@ def createScalograms (ecg, annotation_per_sec, dir_target, dataset_name, num_sam
     if not os.path.exists(dir_target_neg):
         os.makedirs(dir_target_neg)
 
+    file_name_mean_values = dir_target + '\\' + dataset_name + '_MEAN.png'
+    file_name_noise_ratio = dir_target + '\\' + dataset_name + '_NOISERATIO.png'
+
     # wavelets
     w_sz = 128
     h_sz = 128
     gc = 0
+    mean_values = []
+    noise_ratio = []
+
     for j in range(0, num_samp):
-    #for j in range(157, 162):
 
         # 1 = this sample (60 Seconds) contains apnea (0 otherwise)
-
         is_apnea_sample = annotation_per_sec[j*sample_seconds]
 
         l = j * sample_length
@@ -602,7 +614,10 @@ def createScalograms (ecg, annotation_per_sec, dir_target, dataset_name, num_sam
         if j == (num_samp - 1):
             break
 
-        sample = ecg[l:h]
+        sample = ecg_bwr[l:h]
+
+        valid_chunk = isValidECGChunk(sample)
+        valid_chunk_suffix = '_valid' if valid_chunk else '_INVALID'
 
         # dt = 0.01
         wavelet = 'cmor1.5-1.0'
@@ -617,41 +632,41 @@ def createScalograms (ecg, annotation_per_sec, dir_target, dataset_name, num_sam
         apnea_symbol = 'A' if is_apnea_sample else 'N'
 
         file_name_raw = directory + '\\' + dataset_name + str(gc).zfill(
-            len(str(num_samp))) + '_' + apnea_symbol + '_RAW_' + '.png'
+            len(str(num_samp))) + '_' + apnea_symbol + '_RAW_' + valid_chunk_suffix + '.png'
         file_name_scalogram = directory + '\\' + dataset_name + str(gc).zfill(
-            len(str(num_samp))) + '_' + apnea_symbol + '_SCA_' + '.png'
+            len(str(num_samp))) + '_' + apnea_symbol + '_SCA_' + valid_chunk_suffix + '.png'
         file_name_scalogram_small = directory + '\\' + dataset_name + str(gc).zfill(
-            len(str(num_samp))) + '_' + apnea_symbol + '_SCA_small' + '.png'
+            len(str(num_samp))) + '_' + apnea_symbol + '_SCA_small' + valid_chunk_suffix + '.png'
+        file_name_scalogram_smooth = directory + '\\' + dataset_name + str(gc).zfill(
+            len(str(num_samp))) + '_' + apnea_symbol + '_SCA_' + valid_chunk_suffix + '_SMOOTH.png'
+
+        mean = np.mean(sample)
+        mean_values.append(mean)
+
+        sample_smooth = pd.Series(sample).rolling(10).mean()
+
+        noise_ratio_sample = signaltonoise(sample_smooth, axis=0, ddof=0)
+        noise_ratio.append(noise_ratio_sample)
 
         if create_additional_info:
             # save plot of raw data
+
             f = plt.figure()
-            f.set_size_inches(w_sz / 10, h_sz / 10)
+            f.set_size_inches(w_sz / 15, h_sz / 15)
             time = range(0, sample_length)
+
             plt.plot(time, sample)
+
+            plt.plot(time, sample_smooth)
+
+            sd = np.var(sample) ** 0.5
+            x = 2
+            plt.axhline(y=mean + x * sd, linewidth=2, color='g')
+            plt.axhline(y=mean - x * sd, linewidth=2, color='g')
             plt.savefig(file_name_raw,
                         bbox_inches='tight',
                         pad_inches=0)
             plt.close(f)
-
-            # save plot of scalogram
-            #f = plt.figure()
-            #f.set_size_inches(w_sz*5, h_sz*5)
-            #time = range(0, sample_length)
-            #plt.contourf(time, np.log2(frequencies), power)
-
-            #plt.gca().margins(0, 0)
-            #plt.gca().set_axis_off()
-            #plt.gca().xaxis.set_major_locator(matplotlib.ticker.NullLocator())
-            #plt.gca().yaxis.set_major_locator(matplotlib.ticker.NullLocator())
-            #plt.gca().set_xticklabels([])
-            #plt.gca().set_yticklabels([])
-
-            #plt.savefig(file_name_scalogram,
-            #            bbox_inches = 'tight',
-            #            pad_inches=0,
-            #            dpi=(128.6) / 99)
-            #plt.close(f)
 
         # save small plot of scalogram
         f = plt.figure()
@@ -677,9 +692,59 @@ def createScalograms (ecg, annotation_per_sec, dir_target, dataset_name, num_sam
 
         gc += 1
 
+    # plot noise ratio
+    f = plt.figure()
+    f.set_size_inches(50, 10)
+    #plt.ylim(-0.3, 0.3)
+    plt.plot(np.array(noise_ratio))
+    plt.savefig(file_name_noise_ratio,
+                bbox_inches='tight',
+                pad_inches=0)
+    plt.close(f)
+
+    # plot mean values of all samples
+    f = plt.figure()
+    f.set_size_inches(50, 10)
+    time = range(0, sample_length)
+    plt.ylim(-0.3, 0.3)
+    plt.plot(np.array(mean_values))
+    plt.axhline(y=np.mean(mean_values), linewidth=2, color='b')
+    sd = np.var(mean_values) ** 0.5
+    x = 2
+    plt.axhline(y=np.mean(mean_values) + x * sd, linewidth=2, color='g')
+    plt.axhline(y=np.mean(mean_values) - x * sd, linewidth=2, color='g')
+
+    plt.savefig(file_name_mean_values,
+                bbox_inches='tight',
+                pad_inches=0)
+    plt.close(f)
+
     spinner.text = 'Processing data... ' + str(num_samp - 1) + '/' + str(num_samp - 1)
     spinner.succeed()
 
+def isValidECGChunk(ecg):
+    """
+    Compute the mean value of your time-series. Compute the standard deviation. Isolate those values which are more than x*sd above the mean
+    Signal is smoothened first.
+    :param ecg:
+    :return:
+    """
+
+    ecg_smooth = pd.Series(ecg).rolling(10).mean()
+
+    mean = np.mean(ecg_smooth)
+    standard_deviation = np.var(ecg_smooth)**0.5
+
+    x = 2.5
+    upper_bound = mean + x * standard_deviation
+    lower_bound = mean - x * standard_deviation
+
+    spike_upper = np.max(ecg_smooth)
+    spike_lower = np.min(ecg_smooth)
+
+    is_valid = upper_bound > spike_upper and spike_lower > lower_bound
+
+    return is_valid
 
 def saveApneaSignals(target_path, annotations_std_type, annotations_std_binary, annotations_resampled):
     """
@@ -733,7 +798,6 @@ def createRepresentationChunks(
     # loop through all data sets
 
     for dataset_i in range(len(paths_datasets)):
-
         # -----------------------------------------------------------------------
         # Init
         # ---------------------------------------------------------------
@@ -815,6 +879,11 @@ def createRepresentationChunks(
                              })
             print() # new line
 
-        #createScalograms(ecg, resampled_ann_per_sec, dir_target, dataset_name, num_samp, sample_length, sample_seconds, create_additional_info)
-
+        createScalograms(ecg, resampled_ann_per_sec, dir_target, dataset_name, num_samp, sample_length, sample_seconds, create_additional_info)
     return
+
+def signaltonoise(a, axis=0, ddof=0):
+    a = np.asanyarray(a)
+    m = a.mean(axis)
+    sd = a.std(axis=axis, ddof=ddof)
+    return np.where(sd == 0, 0, 10*np.log10(abs(m/sd)))

@@ -6,12 +6,13 @@ target_freq=100
 sample_seconds=60
 
 datasets = sorted(glob.glob('D:\\GitRepositories\\DSDM\\Period1\\github_ecg\\db_shhs\\edfs\\shhs1\\*.edf'))
-
+#for i in range(6):
+#    del datasets[0]
 # use if True/False to activate/deactivate the code block without the need to comment/uncomment
 if True:
     ap.createRepresentationChunks(
         paths_datasets=datasets,
-        dir_target = 'D:\\GitRepositories\\DSDM\\Period1\\github_ecg\\db_shhs\\edfs\\shhs1\\AnnotationsAllTypesConsidered',
+        dir_target = 'D:\\GitRepositories\\DSDM\\Period1\\github_ecg\\db_shhs\\edfs\\shhs1\\Scalograms1To125_BaselineCorrection',
         database = 2,
         target_freq = target_freq,
         sample_seconds = sample_seconds,
@@ -27,7 +28,7 @@ if False:
     datasets = sorted(glob.glob('D:\GitRepositories\DSDM\Period1\github_ecg\db3_ucddb\Resampled\Record100Hz\\*.dat'))
     ap.createRepresentationChunks(
         paths_datasets=datasets,
-        dir_target ='D:\GitRepositories\DSDM\Period1\github_ecg\db3_ucddb\Resampled\Record100Hz\\Scalograms128x128Range1To125_power0_5',
+        dir_target ='D:\GitRepositories\DSDM\Period1\github_ecg\db3_ucddb\Resampled\Record100Hz\\Scalogram_1to125_BaselineCorrection',
         database = 3,
         target_freq = target_freq,
         sample_seconds = sample_seconds,
